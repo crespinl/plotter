@@ -1,0 +1,14 @@
+.vscode/**
+CMakeFiles/**
+.ninja_deps
+.ninja_log
+*.ninja
+CMakeCache.txt
+plotter
+*.cmake
+*.xml
+*.cppcheck
+doc/**
+Doxyfile
+test_program*
+build/**
