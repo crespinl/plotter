@@ -82,10 +82,10 @@ void Plotter::draw_axis(Renderer& renderer)
     int nb_vertical_axis = width / 130;
     int nb_horizontal_axis = height / 130;
 
-    float x_max = ((float)width - (float)width / 2.) / m_zoom - m_x_offset;
-    float x_min = (0. - (float)width / 2.) / m_zoom - m_x_offset;
-    float y_max = (0. + (float)height / 2.) / m_zoom - m_y_offset;
-    float y_min = (-(float)height + (float)height / 2.) / m_zoom - m_y_offset;
+    float x_max = from_screen_x(width);
+    float x_min = from_screen_x(0);
+    float y_max = from_screen_y(0);
+    float y_min = from_screen_y(height);
 
     float delta_x = x_max - x_min;
     float delta_y = y_max - y_min;
@@ -105,24 +105,37 @@ void Plotter::draw_axis(Renderer& renderer)
     renderer.SetDrawColor(180, 180, 180, 255);
     for (int i = 0; i < nb_horizontal_axis; i++)
     {
-        renderer.FillRect(Rect::FromCorners(0, height / 2 - (rounded_y_min + i * y_step) * m_zoom - line_width_half - y_offset, width, height / 2 - (rounded_y_min + i * y_step) * m_zoom + line_width_half - y_offset));
+        renderer.FillRect(Rect::FromCorners(0, to_screen_y(rounded_y_min + i * y_step) - line_width_half, width, to_screen_y(rounded_y_min + i * y_step) + line_width_half));
     }
     for (int i = 0; i < nb_vertical_axis; i++)
     {
-        renderer.FillRect(Rect::FromCorners(width / 2 + (rounded_x_min + i * x_step) * m_zoom - line_width_half + x_offset, 0, width / 2 + (rounded_x_min + i * x_step) * m_zoom + line_width_half + x_offset, height));
+        renderer.FillRect(Rect::FromCorners(to_screen_x(rounded_x_min + i * x_step) - line_width_half, 0, to_screen_x(rounded_x_min + i * x_step) + line_width_half, height));
     }
 
     // Draw main axis :
     renderer.SetDrawColor(120, 120, 120, 255);
-    renderer.FillRect(Rect::FromCorners(0, height / 2 - line_width_half - y_offset, width, height / 2 + line_width_half - y_offset));
-    renderer.FillRect(Rect::FromCorners(width / 2 - line_width_half + x_offset, 0, width / 2 + line_width_half + x_offset, height));
+    renderer.FillRect(Rect::FromCorners(0, to_screen_y(0) - line_width_half, width, to_screen_y(0) + line_width_half));
+    renderer.FillRect(Rect::FromCorners(to_screen_x(0) - line_width_half, 0, to_screen_x(0) + line_width_half, height));
 }
 
 void Plotter::draw_point(int x, int y, Renderer& renderer)
 {
-    x *= m_zoom;
-    y *= m_zoom;
-    int x_offset = compute_x_offset();
-    int y_offset = compute_y_offset();
-    renderer.FillRect(Rect::FromCorners(width / 2 + x - 5 + x_offset, height / 2 - y - 5 - y_offset, width / 2 + x + 5 + x_offset, height / 2 - y + 5 - y_offset));
+    renderer.FillRect(Rect::FromCorners(to_screen_x(x) - 5, to_screen_y(y) - 5, to_screen_x(x) + 5, to_screen_y(y) + 5));
+}
+
+int Plotter::to_screen_x(float x) const
+{
+    return width / 2 + x * m_zoom + compute_x_offset();
+}
+int Plotter::to_screen_y(float y) const
+{
+    return height / 2 - y * m_zoom - compute_y_offset();
+}
+float Plotter::from_screen_x(int x) const
+{
+    return ((float)x - (float)width / 2.) / m_zoom - m_x_offset;
+}
+float Plotter::from_screen_y(int x) const
+{
+    return (-x + (float)height / 2.) / m_zoom - m_y_offset;
 }

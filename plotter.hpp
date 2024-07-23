@@ -18,6 +18,10 @@ private:
     void draw_point(int x, int y, SDL2pp::Renderer& renderer); // Absolute coordinates
     int compute_x_offset() const { return m_x_offset * m_zoom; }
     int compute_y_offset() const { return m_y_offset * m_zoom; }
+    int to_screen_x(float x) const;
+    int to_screen_y(float y) const;
+    float from_screen_x(int x) const;
+    float from_screen_y(int x) const;
     bool m_running;
     float m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     float m_y_offset;
