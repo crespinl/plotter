@@ -1,6 +1,8 @@
+#include <chrono>
+#include <iomanip>
 #include <plotter.hpp>
 #include <sstream>
-#include <iomanip>
+#include <thread>
 
 using namespace std;
 using namespace SDL2pp;
@@ -17,6 +19,7 @@ bool Plotter::plot()
         SDL_Event event;
         while (m_running)
         {
+            auto start = chrono::steady_clock::now();
             while (SDL_PollEvent(&event))
             {
                 if (event.type == SDL_QUIT)
@@ -71,7 +74,13 @@ bool Plotter::plot()
             draw_point(20, 20, renderer);
 
             renderer.Present();
-            SDL_Delay(10); // Limit number of frames
+
+            // Frame limiter
+            auto end = chrono::steady_clock::now();
+            std::chrono::duration<double> diff = end - start;
+            int duration_ms = round(diff.count() * 1000);
+            int to_wait = max(40 - duration_ms, 0); // Make the whole iteration take at least 1/25 s
+            this_thread::sleep_for(chrono::milliseconds(to_wait));
         }
     }
     catch (exception const& e)
@@ -199,6 +208,6 @@ std::string Plotter::to_str(float nb)
 {
     ostringstream out;
     out << setprecision(4);
-    out <<  nb;
+    out << nb;
     return out.str();
 }
