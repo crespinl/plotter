@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cmath>
 #include <iomanip>
 #include <plotter.hpp>
 #include <sstream>
@@ -70,11 +71,18 @@ bool Plotter::plot()
             center_sprite(renderer, title_sprite, (width + 2 * hmargin) / 2, top_margin / 2);
 
             draw_axis(renderer);
-            
+
+            Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, hmargin + width, top_margin + height };
+            sprite.SetBlendMode(SDL_BLENDMODE_BLEND);
+            renderer.SetTarget(sprite);
+            renderer.SetDrawColor(0, 0, 0, 0);
+            renderer.Clear();
+            renderer.SetTarget();
             for (auto const& e : m_collections)
             {
-                plot_collection(e, renderer);
+                plot_collection(e, renderer, sprite);
             }
+            renderer.Copy(sprite, Rect { hmargin, top_margin, width, height }, { hmargin, top_margin });
 
             renderer.Present();
 
@@ -215,11 +223,42 @@ std::string Plotter::to_str(float nb)
     return out.str();
 }
 
-void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer)
+void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, Texture& into)
 {
+    if (c.points.size() == 0)
+        return;
     renderer.SetDrawColor(c.color());
-    for (Coordinate const& e : c.points)
+    for (size_t i = 0; i < c.points.size() - 1; i++)
     {
-        draw_point(e.x, e.y, renderer);
+        if ((!x_is_in_plot(to_plot_x(c.points[i].x)) || !y_is_in_plot(to_plot_y(c.points[i].y)))
+            && (!x_is_in_plot(to_plot_x(c.points[i + 1].x)) || !y_is_in_plot(to_plot_y(c.points[i + 1].y))))
+            continue;
+        if (c.draw_points)
+            draw_point(c.points[i].x, c.points[i].y, renderer);
+        if (c.draw_lines)
+            draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into);
     }
+    if (c.draw_points)
+        draw_point(c.points.back().x, c.points.back().y, renderer);
+}
+
+SDL2pp::Point Plotter::to_point(Coordinate const& c) const
+{
+    return { to_plot_x(c.x), to_plot_y(c.y) };
+}
+
+void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Texture& into)
+{
+    int w = sqrt(pow(p2.GetX() - p1.GetX(), 2) + pow(p2.GetY() - p1.GetY(), 2)) + 1;
+    if (w > 16384) // Max texture size
+    {
+        return;
+    }
+    float angle = atan2(p2.GetY() - p1.GetY(), p2.GetX() - p1.GetX()) * 360 / (2 * numbers::pi_v<float>);
+    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 2 * line_width_half };
+    renderer.SetTarget(sprite);
+    renderer.Clear();
+    renderer.SetTarget(into);
+    renderer.Copy(sprite, NullOpt, p1, angle, Point { 0, 0 });
+    renderer.SetTarget();
 }

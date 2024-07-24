@@ -7,7 +7,12 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     Plotter plotter { "Plot test" };
-    vector<Coordinate> coordinates { { 0., 0. }, { 1., 1. }, { 2., 4. }, { 3., 9. }, { 4., 16. } };
-    plotter.add_collection({ coordinates, "f(x) = x**2", 255, 0, 0 });
+    vector<Coordinate> coordinates;
+    for (int i = 0; i < 1000; i++)
+    {
+        float v = (float)i / 100.;
+        coordinates.push_back({ v, cos(v) });
+    }
+    plotter.add_collection({ coordinates, "f(x) = x**2", 255, 0, 0, false, true });
     return !plotter.plot();
 }

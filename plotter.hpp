@@ -18,6 +18,8 @@ struct Collection
     uint8_t red;
     uint8_t green;
     uint8_t blue;
+    bool draw_points { true };
+    bool draw_lines { false };
     SDL2pp::Color color() const { return SDL2pp::Color(red, green, blue, 255); }
 };
 
@@ -26,9 +28,9 @@ class Plotter
 public:
     Plotter(std::string const& title)
         : m_running(false)
-        , m_x_offset(0.)
+        , m_x_offset(-5.)
         , m_y_offset(0.)
-        , m_zoom(12.)
+        , m_zoom(50.)
         , m_title(title)
         , m_big_font("./notosans.ttf", big_font_size)
         , m_small_font("./firacode.ttf", small_font_size)
@@ -51,7 +53,9 @@ private:
     void draw_horizontal_line_number(float nb, int y, SDL2pp::Renderer& renderer);
     void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
     std::string to_str(float nb);
-    void plot_collection(Collection const& c, SDL2pp::Renderer& renderer);
+    void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
+    SDL2pp::Point to_point(Coordinate const& c) const;
+    void draw_line(SDL2pp::Point const& p1, SDL2pp::Point const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     bool m_running;
     float m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     float m_y_offset;
