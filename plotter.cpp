@@ -70,8 +70,11 @@ bool Plotter::plot()
             center_sprite(renderer, title_sprite, (width + 2 * hmargin) / 2, top_margin / 2);
 
             draw_axis(renderer);
-            renderer.SetDrawColor(255, 0, 0, 255);
-            draw_point(20, 20, renderer);
+            
+            for (auto const& e : m_collections)
+            {
+                plot_collection(e, renderer);
+            }
 
             renderer.Present();
 
@@ -159,7 +162,7 @@ void Plotter::draw_point(int x, int y, Renderer& renderer)
     int abscissa = to_plot_x(x);
     int ordinate = to_plot_y(y);
     if (x_is_in_plot(abscissa) && y_is_in_plot(ordinate))
-        renderer.FillRect(Rect::FromCorners(abscissa - 5, ordinate - 5, abscissa + 5, ordinate + 5));
+        renderer.FillRect(Rect::FromCorners(abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size));
 }
 
 int Plotter::to_plot_x(float x) const
@@ -210,4 +213,13 @@ std::string Plotter::to_str(float nb)
     out << setprecision(4);
     out << nb;
     return out.str();
+}
+
+void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer)
+{
+    renderer.SetDrawColor(c.color());
+    for (Coordinate const& e : c.points)
+    {
+        draw_point(e.x, e.y, renderer);
+    }
 }
