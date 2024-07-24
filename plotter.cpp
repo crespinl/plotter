@@ -8,7 +8,7 @@ bool Plotter::plot()
     try
     {
         SDL sdl(SDL_INIT_VIDEO);
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * hmargin + width, top_margin + height + bottom_margin, SDL_WINDOW_SHOWN);
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
@@ -55,8 +55,11 @@ bool Plotter::plot()
                 }
             }
 
-            renderer.SetDrawColor(255, 255, 255, 255);
+            renderer.SetDrawColor(255, 255, 255, 255); // Clear the screen
             renderer.Clear();
+
+            renderer.SetDrawColor(0, 0, 0, 255); // Draw the plot box
+            renderer.DrawRect(Rect::FromCorners(hmargin, top_margin, hmargin + width, top_margin + height));
 
             draw_axis(renderer);
             renderer.SetDrawColor(255, 0, 0, 255);
@@ -82,10 +85,10 @@ void Plotter::draw_axis(Renderer& renderer)
     int nb_vertical_axis = width / 130;
     int nb_horizontal_axis = height / 130;
 
-    float x_max = from_screen_x(width);
-    float x_min = from_screen_x(0);
-    float y_max = from_screen_y(0);
-    float y_min = from_screen_y(height);
+    float x_max = from_plot_x(width);
+    float x_min = from_plot_x(0);
+    float y_max = from_plot_y(0);
+    float y_min = from_plot_y(height);
 
     float delta_x = x_max - x_min;
     float delta_y = y_max - y_min;
@@ -105,37 +108,49 @@ void Plotter::draw_axis(Renderer& renderer)
     renderer.SetDrawColor(180, 180, 180, 255);
     for (int i = 0; i < nb_horizontal_axis; i++)
     {
-        renderer.FillRect(Rect::FromCorners(0, to_screen_y(rounded_y_min + i * y_step) - line_width_half, width, to_screen_y(rounded_y_min + i * y_step) + line_width_half));
+        int ordinate = to_plot_y(rounded_y_min + i * y_step);
+        if (y_is_in_plot(ordinate))
+            renderer.FillRect(Rect::FromCorners(hmargin, ordinate - line_width_half, hmargin + width, ordinate + line_width_half));
     }
     for (int i = 0; i < nb_vertical_axis; i++)
     {
-        renderer.FillRect(Rect::FromCorners(to_screen_x(rounded_x_min + i * x_step) - line_width_half, 0, to_screen_x(rounded_x_min + i * x_step) + line_width_half, height));
+        int abscissa = to_plot_x(rounded_x_min + i * x_step);
+        if (x_is_in_plot(abscissa))
+            renderer.FillRect(Rect::FromCorners(abscissa - line_width_half, top_margin, abscissa + line_width_half, top_margin + height));
     }
 
     // Draw main axis :
     renderer.SetDrawColor(120, 120, 120, 255);
-    renderer.FillRect(Rect::FromCorners(0, to_screen_y(0) - line_width_half, width, to_screen_y(0) + line_width_half));
-    renderer.FillRect(Rect::FromCorners(to_screen_x(0) - line_width_half, 0, to_screen_x(0) + line_width_half, height));
+    renderer.FillRect(Rect::FromCorners(hmargin, to_plot_y(0) - line_width_half, hmargin + width, to_plot_y(0) + line_width_half)); // abscissa
+    renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + height)); // ordinate
 }
 
 void Plotter::draw_point(int x, int y, Renderer& renderer)
 {
-    renderer.FillRect(Rect::FromCorners(to_screen_x(x) - 5, to_screen_y(y) - 5, to_screen_x(x) + 5, to_screen_y(y) + 5));
+    renderer.FillRect(Rect::FromCorners(to_plot_x(x) - 5, to_plot_y(y) - 5, to_plot_x(x) + 5, to_plot_y(y) + 5));
 }
 
-int Plotter::to_screen_x(float x) const
+int Plotter::to_plot_x(float x) const
 {
-    return width / 2 + x * m_zoom + compute_x_offset();
+    return width / 2 + x * m_zoom + compute_x_offset() + hmargin;
 }
-int Plotter::to_screen_y(float y) const
+int Plotter::to_plot_y(float y) const
 {
-    return height / 2 - y * m_zoom - compute_y_offset();
+    return height / 2 - y * m_zoom - compute_y_offset() + top_margin;
 }
-float Plotter::from_screen_x(int x) const
+float Plotter::from_plot_x(int x) const
 {
-    return ((float)x - (float)width / 2.) / m_zoom - m_x_offset;
+    return ((float)x - hmargin - (float)width / 2.) / m_zoom - m_x_offset;
 }
-float Plotter::from_screen_y(int x) const
+float Plotter::from_plot_y(int x) const
 {
-    return (-x + (float)height / 2.) / m_zoom - m_y_offset;
+    return (-x + top_margin + (float)height / 2.) / m_zoom - m_y_offset;
+}
+bool Plotter::x_is_in_plot(int x) const
+{
+    return x > hmargin && x < hmargin + width;
+}
+bool Plotter::y_is_in_plot(int y) const
+{
+    return y > top_margin && y < top_margin + height;
 }
