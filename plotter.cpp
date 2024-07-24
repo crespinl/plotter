@@ -121,13 +121,18 @@ void Plotter::draw_axis(Renderer& renderer)
 
     // Draw main axis :
     renderer.SetDrawColor(120, 120, 120, 255);
-    renderer.FillRect(Rect::FromCorners(hmargin, to_plot_y(0) - line_width_half, hmargin + width, to_plot_y(0) + line_width_half)); // abscissa
-    renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + height)); // ordinate
+    if (y_is_in_plot(to_plot_y(0)))
+        renderer.FillRect(Rect::FromCorners(hmargin, to_plot_y(0) - line_width_half, hmargin + width, to_plot_y(0) + line_width_half)); // abscissa
+    if (x_is_in_plot(to_plot_x(0)))
+        renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + height)); // ordinate
 }
 
 void Plotter::draw_point(int x, int y, Renderer& renderer)
 {
-    renderer.FillRect(Rect::FromCorners(to_plot_x(x) - 5, to_plot_y(y) - 5, to_plot_x(x) + 5, to_plot_y(y) + 5));
+    int abscissa = to_plot_x(x);
+    int ordinate = to_plot_y(y);
+    if (x_is_in_plot(abscissa) && y_is_in_plot(ordinate))
+        renderer.FillRect(Rect::FromCorners(abscissa - 5, ordinate - 5, abscissa + 5, ordinate + 5));
 }
 
 int Plotter::to_plot_x(float x) const
