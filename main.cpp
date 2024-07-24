@@ -6,6 +6,6 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    Plotter plotter;
+    Plotter plotter {"Plot test"};
     return !plotter.plot();
 }

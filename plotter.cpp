@@ -1,4 +1,6 @@
 #include <plotter.hpp>
+#include <sstream>
+#include <iomanip>
 
 using namespace std;
 using namespace SDL2pp;
@@ -61,6 +63,9 @@ bool Plotter::plot()
             renderer.SetDrawColor(0, 0, 0, 255); // Draw the plot box
             renderer.DrawRect(Rect::FromCorners(hmargin, top_margin, hmargin + width, top_margin + height));
 
+            Texture title_sprite { renderer, m_big_font.RenderText_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
+            center_sprite(renderer, title_sprite, (width + 2 * hmargin) / 2, top_margin / 2);
+
             draw_axis(renderer);
             renderer.SetDrawColor(255, 0, 0, 255);
             draw_point(20, 20, renderer);
@@ -110,21 +115,34 @@ void Plotter::draw_axis(Renderer& renderer)
     {
         int ordinate = to_plot_y(rounded_y_min + i * y_step);
         if (y_is_in_plot(ordinate))
+        {
+            draw_horizontal_line_number(rounded_y_min + i * y_step, ordinate, renderer);
             renderer.FillRect(Rect::FromCorners(hmargin, ordinate - line_width_half, hmargin + width, ordinate + line_width_half));
+        }
     }
     for (int i = 0; i < nb_vertical_axis; i++)
     {
         int abscissa = to_plot_x(rounded_x_min + i * x_step);
         if (x_is_in_plot(abscissa))
+        {
+            draw_vertical_line_number(rounded_x_min + i * x_step, abscissa, renderer);
             renderer.FillRect(Rect::FromCorners(abscissa - line_width_half, top_margin, abscissa + line_width_half, top_margin + height));
+        }
     }
 
     // Draw main axis :
+    Texture zero_sprite { renderer, m_small_font.RenderText_Blended("0", SDL_Color(0, 0, 0, 255)) };
     renderer.SetDrawColor(120, 120, 120, 255);
-    if (y_is_in_plot(to_plot_y(0)))
-        renderer.FillRect(Rect::FromCorners(hmargin, to_plot_y(0) - line_width_half, hmargin + width, to_plot_y(0) + line_width_half)); // abscissa
-    if (x_is_in_plot(to_plot_x(0)))
-        renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + height)); // ordinate
+    if (y_is_in_plot(to_plot_y(0))) // abscissa
+    {
+        draw_horizontal_line_number(0., to_plot_y(0.), renderer);
+        renderer.FillRect(Rect::FromCorners(hmargin, to_plot_y(0) - line_width_half, hmargin + width, to_plot_y(0) + line_width_half));
+    }
+    if (x_is_in_plot(to_plot_x(0))) // ordinate
+    {
+        draw_vertical_line_number(0., to_plot_x(0.), renderer);
+        renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + height));
+    }
 }
 
 void Plotter::draw_point(int x, int y, Renderer& renderer)
@@ -158,4 +176,29 @@ bool Plotter::x_is_in_plot(int x) const
 bool Plotter::y_is_in_plot(int y) const
 {
     return y > top_margin && y < top_margin + height;
+}
+
+void Plotter::draw_vertical_line_number(float nb, int x, SDL2pp::Renderer& renderer)
+{
+    Texture sprite { renderer, m_small_font.RenderText_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
+    center_sprite(renderer, sprite, x, top_margin + height + text_margin + sprite.GetHeight() / 2);
+}
+
+void Plotter::draw_horizontal_line_number(float nb, int y, SDL2pp::Renderer& renderer)
+{
+    Texture sprite { renderer, m_small_font.RenderText_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
+    center_sprite(renderer, sprite, hmargin - text_margin - sprite.GetWidth() / 2, y);
+}
+
+void Plotter::center_sprite(Renderer& renderer, Texture& texture, int x, int y)
+{
+    renderer.Copy(texture, NullOpt, { x - texture.GetWidth() / 2, y - texture.GetHeight() / 2 });
+}
+
+std::string Plotter::to_str(float nb)
+{
+    ostringstream out;
+    out << setprecision(4);
+    out <<  nb;
+    return out.str();
 }

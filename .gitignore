@@ -12,3 +12,4 @@ doc/**
 Doxyfile
 test_program*
 build/**
+*.ttf
