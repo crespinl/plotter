@@ -255,19 +255,23 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     int x2 = p2.GetX();
     int y1 = p1.GetY();
     int y2 = p2.GetY();
+    Rect { hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the line
     int const max_w = sqrt(width * width + height + height);
     float w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;
     if (w_candidate > max_w)
+    {
         w = max_w;
+    }
     else
-        w = static_cast<int>(w_candidate) + 1;
+    {
+        w = static_cast<int>(w_candidate);
+    }
     float angle = atan2(y2 - y1, x2 - x1);
     Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 4 * line_width_half };
     renderer.SetTarget(sprite);
     renderer.Clear();
     renderer.SetTarget(into);
-    Rect { hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2);                                                               // clips only the needed part of the line
     Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
     angle *= 360 / (2 * numbers::pi_v<float>);                                                                                               // to degree
     renderer.Copy(sprite, NullOpt, dst_point, angle, Point { 0, 0 });

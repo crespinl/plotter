@@ -28,8 +28,8 @@ class Plotter
 public:
     Plotter(std::string const& title)
         : m_running(false)
-        , m_x_offset(-5.)
-        , m_y_offset(-5.)
+        , m_x_offset(0.)
+        , m_y_offset(0.)
         , m_zoom(50.)
         , m_title(title)
         , m_big_font("./notosans.ttf", big_font_size)
