@@ -13,7 +13,7 @@ bool Plotter::plot()
     try
     {
         SDL sdl(SDL_INIT_VIDEO);
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * hmargin + width, top_margin + height + bottom_margin, SDL_WINDOW_SHOWN);
+        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * hmargin + width, top_margin + height + plot_info_margin + info_height() + bottom_margin, SDL_WINDOW_SHOWN);
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
@@ -54,18 +54,31 @@ bool Plotter::plot()
                     default:
                         break;
                     }
+                    update_mouse_position();
                 }
                 else if (event.type == SDL_MOUSEWHEEL)
                 {
-                    m_zoom = m_zoom * pow(zoom_factor, event.wheel.preciseY);
+                    m_zoom = min(max(m_zoom * pow(zoom_factor, event.wheel.preciseY), 2e-37f), 2e8f);
+                    update_mouse_position();
+                }
+                else if (event.type == SDL_MOUSEMOTION)
+                {
+                    update_mouse_position();
                 }
             }
 
             renderer.SetDrawColor(255, 255, 255, 255); // Clear the screen
             renderer.Clear();
 
-            renderer.SetDrawColor(0, 0, 0, 255); // Draw the plot box
-            renderer.DrawRect(Rect::FromCorners(hmargin, top_margin, hmargin + width, top_margin + height));
+            renderer.SetDrawColor(0, 0, 0, 255);
+            renderer.DrawRect(Rect::FromCorners(hmargin, top_margin, hmargin + width, top_margin + height)); // Draw the plot box
+            // renderer.DrawRect(Rect::FromCorners(hmargin, top_margin + height + plot_info_margin, hmargin + width, top_margin + height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
+            if (!isnan(m_mouse_x))
+            {
+                string text = "x : " + to_str(m_mouse_x) + ", y : " + to_str(m_mouse_y);
+                Texture mouse_sprite { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
+                renderer.Copy(mouse_sprite, NullOpt, { hmargin, top_margin + height + plot_info_margin + info_margin });
+            }
 
             Texture title_sprite { renderer, m_big_font.RenderText_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
             center_sprite(renderer, title_sprite, (width + 2 * hmargin) / 2, top_margin / 2);
@@ -218,7 +231,7 @@ void Plotter::center_sprite(Renderer& renderer, Texture& texture, int x, int y)
 std::string Plotter::to_str(float nb)
 {
     ostringstream out;
-    out << setprecision(4);
+    out << setprecision(5);
     out << nb;
     return out.str();
 }
@@ -276,4 +289,21 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     angle *= 360 / (2 * numbers::pi_v<float>);                                                                                               // to degree
     renderer.Copy(sprite, NullOpt, dst_point, angle, Point { 0, 0 });
     renderer.SetTarget();
+}
+
+void Plotter::update_mouse_position()
+{
+    int x;
+    int y;
+    SDL_GetMouseState(&x, &y);
+    if (x_is_in_plot(x) && y_is_in_plot(y))
+    {
+        m_mouse_x = from_plot_x(x);
+        m_mouse_y = from_plot_y(y);
+    }
+    else
+    {
+        m_mouse_x = NAN;
+        m_mouse_y = NAN;
+    }
 }

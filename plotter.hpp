@@ -34,6 +34,8 @@ public:
         , m_title(title)
         , m_big_font("./notosans.ttf", big_font_size)
         , m_small_font("./firacode.ttf", small_font_size)
+        , m_mouse_x(NAN)
+        , m_mouse_y(NAN)
     { }
     bool plot();
     void add_collection(Collection const& c) { m_collections.push_back(c); }
@@ -56,6 +58,8 @@ private:
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     SDL2pp::Point to_point(Coordinate const& c) const;
     void draw_line(SDL2pp::Point const& p1, SDL2pp::Point const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
+    int info_height() const { return 2 * info_margin + small_font_size; }
+    void update_mouse_position();
     bool m_running;
     float m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     float m_y_offset;
@@ -65,11 +69,15 @@ private:
     SDL2pp::Font m_big_font;
     SDL2pp::Font m_small_font;
     std::vector<Collection> m_collections;
+    float m_mouse_x;
+    float m_mouse_y;
 
     static constexpr int width = 800;
     static constexpr int height = 600;
     static constexpr int top_margin = 50;
-    static constexpr int bottom_margin = 50;
+    static constexpr int plot_info_margin = 25;
+    static constexpr int info_margin = 5;
+    static constexpr int bottom_margin = 25;
     static constexpr int line_width_half = 1;
     static constexpr int half_point_size = 4;
     static constexpr float zoom_factor = 1.3;
