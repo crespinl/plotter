@@ -230,9 +230,11 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     renderer.SetDrawColor(c.color());
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
-        if ((!x_is_in_plot(to_plot_x(c.points[i].x)) || !y_is_in_plot(to_plot_y(c.points[i].y)))
-            && (!x_is_in_plot(to_plot_x(c.points[i + 1].x)) || !y_is_in_plot(to_plot_y(c.points[i + 1].y))))
-            continue;
+        if ((to_plot_x(c.points[i].x) < hmargin && to_plot_x(c.points[i + 1].x) < hmargin)
+            || (to_plot_x(c.points[i].x) > hmargin + width && to_plot_x(c.points[i + 1].x) > hmargin + width)
+            || (to_plot_y(c.points[i].y) < top_margin && to_plot_y(c.points[i + 1].y) < top_margin)
+            || (to_plot_y(c.points[i].y) > top_margin + height && to_plot_y(c.points[i + 1].y) > top_margin + height))
+            continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
         if (c.draw_points)
             draw_point(c.points[i].x, c.points[i].y, renderer);
         if (c.draw_lines)
@@ -249,16 +251,25 @@ SDL2pp::Point Plotter::to_point(Coordinate const& c) const
 
 void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Texture& into)
 {
-    int w = sqrt(pow(p2.GetX() - p1.GetX(), 2) + pow(p2.GetY() - p1.GetY(), 2)) + 1;
-    if (w > 16384) // Max texture size
-    {
-        return;
-    }
-    float angle = atan2(p2.GetY() - p1.GetY(), p2.GetX() - p1.GetX()) * 360 / (2 * numbers::pi_v<float>);
-    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 2 * line_width_half };
+    int x1 = p1.GetX();
+    int x2 = p2.GetX();
+    int y1 = p1.GetY();
+    int y2 = p2.GetY();
+    int const max_w = sqrt(width * width + height + height);
+    float w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
+    int w;
+    if (w_candidate > max_w)
+        w = max_w;
+    else
+        w = static_cast<int>(w_candidate) + 1;
+    float angle = atan2(y2 - y1, x2 - x1);
+    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 4 * line_width_half };
     renderer.SetTarget(sprite);
     renderer.Clear();
     renderer.SetTarget(into);
-    renderer.Copy(sprite, NullOpt, p1, angle, Point { 0, 0 });
+    Rect { hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2);                                                               // clips only the needed part of the line
+    Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
+    angle *= 360 / (2 * numbers::pi_v<float>);                                                                                               // to degree
+    renderer.Copy(sprite, NullOpt, dst_point, angle, Point { 0, 0 });
     renderer.SetTarget();
 }

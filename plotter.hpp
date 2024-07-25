@@ -29,7 +29,7 @@ public:
     Plotter(std::string const& title)
         : m_running(false)
         , m_x_offset(-5.)
-        , m_y_offset(0.)
+        , m_y_offset(-5.)
         , m_zoom(50.)
         , m_title(title)
         , m_big_font("./notosans.ttf", big_font_size)
@@ -71,7 +71,7 @@ private:
     static constexpr int top_margin = 50;
     static constexpr int bottom_margin = 50;
     static constexpr int line_width_half = 1;
-    static constexpr int half_point_size = 3;
+    static constexpr int half_point_size = 4;
     static constexpr float zoom_factor = 1.3;
     static constexpr int big_font_size = 24;
     static constexpr int small_font_size = 15;
