@@ -13,7 +13,7 @@ bool Plotter::plot()
     try
     {
         SDL sdl(SDL_INIT_VIDEO);
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * hmargin + width, top_margin + height + plot_info_margin + info_height() + bottom_margin, SDL_WINDOW_SHOWN);
+        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * m_hmargin + width, top_margin + height + plot_info_margin + info_height() + bottom_margin, SDL_WINDOW_SHOWN);
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
@@ -90,15 +90,15 @@ bool Plotter::plot()
             renderer.Clear();
 
             renderer.SetDrawColor(0, 0, 0, 255);
-            renderer.DrawRect(Rect::FromCorners(hmargin, top_margin, hmargin + width, top_margin + height)); // Draw the plot box
+            renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin, m_hmargin + width, top_margin + height)); // Draw the plot box
             draw_info_box(renderer);
 
             Texture title_sprite { renderer, m_big_font.RenderText_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
-            center_sprite(renderer, title_sprite, (width + 2 * hmargin) / 2, top_margin / 2);
+            center_sprite(renderer, title_sprite, (width + 2 * m_hmargin) / 2, top_margin / 2);
 
             draw_axis(renderer);
 
-            Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, hmargin + width, top_margin + height };
+            Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_hmargin + width, top_margin + height };
             sprite.SetBlendMode(SDL_BLENDMODE_BLEND);
             renderer.SetTarget(sprite);
             renderer.SetDrawColor(0, 0, 0, 0);
@@ -108,7 +108,7 @@ bool Plotter::plot()
             {
                 plot_collection(e, renderer, sprite);
             }
-            renderer.Copy(sprite, Rect { hmargin, top_margin, width, height }, { hmargin, top_margin });
+            renderer.Copy(sprite, Rect { m_hmargin, top_margin, width, height }, { m_hmargin, top_margin });
 
             renderer.Present();
 
@@ -164,7 +164,7 @@ void Plotter::draw_axis(Renderer& renderer)
         if (y_is_in_plot(ordinate))
         {
             draw_horizontal_line_number(rounded_y_min + i * y_step, ordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(hmargin, ordinate - line_width_half, hmargin + width, ordinate + line_width_half));
+            renderer.FillRect(Rect::FromCorners(m_hmargin, ordinate - line_width_half, m_hmargin + width, ordinate + line_width_half));
         }
     }
     for (int i = 0; i < nb_vertical_axis; i++)
@@ -183,7 +183,7 @@ void Plotter::draw_axis(Renderer& renderer)
     if (y_is_in_plot(to_plot_y(0))) // abscissa
     {
         draw_horizontal_line_number(0., to_plot_y(0.), renderer);
-        renderer.FillRect(Rect::FromCorners(hmargin, to_plot_y(0) - line_width_half, hmargin + width, to_plot_y(0) + line_width_half));
+        renderer.FillRect(Rect::FromCorners(m_hmargin, to_plot_y(0) - line_width_half, m_hmargin + width, to_plot_y(0) + line_width_half));
     }
     if (x_is_in_plot(to_plot_x(0))) // ordinate
     {
@@ -202,7 +202,7 @@ void Plotter::draw_point(float x, float y, Renderer& renderer)
 
 int Plotter::to_plot_x(float x) const
 {
-    return width / 2 + x * m_zoom + compute_x_offset() + hmargin;
+    return width / 2 + x * m_zoom + compute_x_offset() + m_hmargin;
 }
 int Plotter::to_plot_y(float y) const
 {
@@ -210,7 +210,7 @@ int Plotter::to_plot_y(float y) const
 }
 float Plotter::from_plot_x(int x) const
 {
-    return ((float)x - hmargin - (float)width / 2.) / m_zoom - m_x_offset;
+    return ((float)x - m_hmargin - (float)width / 2.) / m_zoom - m_x_offset;
 }
 float Plotter::from_plot_y(int x) const
 {
@@ -218,7 +218,7 @@ float Plotter::from_plot_y(int x) const
 }
 bool Plotter::x_is_in_plot(int x) const
 {
-    return x > hmargin && x < hmargin + width;
+    return x > m_hmargin && x < m_hmargin + width;
 }
 bool Plotter::y_is_in_plot(int y) const
 {
@@ -234,7 +234,7 @@ void Plotter::draw_vertical_line_number(float nb, int x, SDL2pp::Renderer& rende
 void Plotter::draw_horizontal_line_number(float nb, int y, SDL2pp::Renderer& renderer)
 {
     Texture sprite { renderer, m_small_font.RenderText_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
-    center_sprite(renderer, sprite, hmargin - text_margin - sprite.GetWidth() / 2, y);
+    center_sprite(renderer, sprite, m_hmargin - text_margin - sprite.GetWidth() / 2, y);
 }
 
 void Plotter::center_sprite(Renderer& renderer, Texture& texture, int x, int y)
@@ -257,8 +257,8 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     renderer.SetDrawColor(c.get_color());
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
-        if ((to_plot_x(c.points[i].x) < hmargin && to_plot_x(c.points[i + 1].x) < hmargin)
-            || (to_plot_x(c.points[i].x) > hmargin + width && to_plot_x(c.points[i + 1].x) > hmargin + width)
+        if ((to_plot_x(c.points[i].x) < m_hmargin && to_plot_x(c.points[i + 1].x) < m_hmargin)
+            || (to_plot_x(c.points[i].x) > m_hmargin + width && to_plot_x(c.points[i + 1].x) > m_hmargin + width)
             || (to_plot_y(c.points[i].y) < top_margin && to_plot_y(c.points[i + 1].y) < top_margin)
             || (to_plot_y(c.points[i].y) > top_margin + height && to_plot_y(c.points[i + 1].y) > top_margin + height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
@@ -282,7 +282,7 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     int x2 = p2.GetX();
     int y1 = p1.GetY();
     int y2 = p2.GetY();
-    Rect { hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the
+    Rect { m_hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the
     float const max_w = sqrt((float)width * (float)width + (float)height * (float)height);
     float w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;
@@ -325,22 +325,22 @@ void Plotter::update_mouse_position()
 void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
 {
     // renderer.SetDrawColor(0, 0, 0, 255);
-    // renderer.DrawRect(Rect::FromCorners(hmargin, top_margin + height + plot_info_margin, hmargin + width, top_margin + height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
+    // renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin + height + plot_info_margin, m_hmargin + width, top_margin + height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
 
     int offset = top_margin + height + plot_info_margin + info_margin;
     for (size_t i = 0; i < m_collections.size(); i++)
     {
         renderer.SetDrawColor(m_collections[i].get_color());
-        renderer.FillRect(Rect { hmargin, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
+        renderer.FillRect(Rect { m_hmargin, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
         Texture name = { renderer, m_small_font.RenderText_Blended(m_collections[i].name, SDL_Color(0, 0, 0, 255)) };
-        renderer.Copy(name, NullOpt, { hmargin + m_small_font.GetHeight() + info_margin, offset });
+        renderer.Copy(name, NullOpt, { m_hmargin + m_small_font.GetHeight() + info_margin, offset });
         offset += info_margin + m_small_font.GetHeight();
     }
     if (!isnan(m_mouse_x))
     {
         string text = "x : " + to_str(m_mouse_x) + ", y : " + to_str(m_mouse_y);
         Texture mouse_sprite { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
-        renderer.Copy(mouse_sprite, NullOpt, { hmargin, offset });
+        renderer.Copy(mouse_sprite, NullOpt, { m_hmargin, offset });
     }
 }
 

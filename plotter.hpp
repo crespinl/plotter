@@ -79,6 +79,8 @@ public:
         , m_mouse_y(NAN)
         , m_size_cursor(nullptr)
         , m_arrow_cursor(nullptr)
+        , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
+        , m_hmargin(30 + 5 * m_small_font_advance)
     { }
     bool plot();
     void add_collection(Collection const& c);
@@ -111,7 +113,7 @@ private:
     std::string m_title;
     SDL2pp::SDLTTF m_ttf;
     SDL2pp::Font m_big_font;
-    SDL2pp::Font m_small_font;
+    SDL2pp::Font m_small_font; // this has to be a monospaced font
     std::vector<Collection> m_collections;
     float m_mouse_x;
     float m_mouse_y;
@@ -119,6 +121,8 @@ private:
     SDL_Cursor* m_size_cursor;
     SDL_Cursor* m_arrow_cursor;
     ColorGenerator m_color_generator;
+    int m_small_font_advance;
+    int m_hmargin;
 
     static constexpr int width = 800;
     static constexpr int height = 600;
@@ -132,7 +136,6 @@ private:
     static constexpr int big_font_size = 24;
     static constexpr int small_font_size = 15;
     static constexpr int text_margin = 5;
-    static constexpr int hmargin = 5 * small_font_size;
 };
 
 /*
