@@ -72,13 +72,7 @@ bool Plotter::plot()
 
             renderer.SetDrawColor(0, 0, 0, 255);
             renderer.DrawRect(Rect::FromCorners(hmargin, top_margin, hmargin + width, top_margin + height)); // Draw the plot box
-            // renderer.DrawRect(Rect::FromCorners(hmargin, top_margin + height + plot_info_margin, hmargin + width, top_margin + height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
-            if (!isnan(m_mouse_x))
-            {
-                string text = "x : " + to_str(m_mouse_x) + ", y : " + to_str(m_mouse_y);
-                Texture mouse_sprite { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
-                renderer.Copy(mouse_sprite, NullOpt, { hmargin, top_margin + height + plot_info_margin + info_margin });
-            }
+            draw_info_box(renderer);
 
             Texture title_sprite { renderer, m_big_font.RenderText_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
             center_sprite(renderer, title_sprite, (width + 2 * hmargin) / 2, top_margin / 2);
@@ -305,5 +299,27 @@ void Plotter::update_mouse_position()
     {
         m_mouse_x = NAN;
         m_mouse_y = NAN;
+    }
+}
+
+void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
+{
+    // renderer.SetDrawColor(0, 0, 0, 255);
+    // renderer.DrawRect(Rect::FromCorners(hmargin, top_margin + height + plot_info_margin, hmargin + width, top_margin + height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
+
+    int offset = top_margin + height + plot_info_margin + info_margin;
+    for (size_t i = 0; i < m_collections.size(); i++)
+    {
+        renderer.SetDrawColor(m_collections[i].color());
+        renderer.FillRect(Rect { hmargin, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
+        Texture name = { renderer, m_small_font.RenderText_Blended(m_collections[i].name, SDL_Color(0, 0, 0, 255)) };
+        renderer.Copy(name, NullOpt, { hmargin + m_small_font.GetHeight() + info_margin, offset });
+        offset += info_margin + m_small_font.GetHeight();
+    }
+    if (!isnan(m_mouse_x))
+    {
+        string text = "x : " + to_str(m_mouse_x) + ", y : " + to_str(m_mouse_y);
+        Texture mouse_sprite { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
+        renderer.Copy(mouse_sprite, NullOpt, { hmargin, offset });
     }
 }
