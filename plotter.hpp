@@ -81,7 +81,12 @@ public:
         , m_arrow_cursor(nullptr)
         , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
         , m_hmargin(30 + 5 * m_small_font_advance)
-    { }
+    {
+        if (!m_small_font.IsFixedWidth())
+        {
+            throw std::runtime_error("The small font has to be fixed width");
+        }
+    }
     bool plot();
     void add_collection(Collection const& c);
 
@@ -113,7 +118,7 @@ private:
     std::string m_title;
     SDL2pp::SDLTTF m_ttf;
     SDL2pp::Font m_big_font;
-    SDL2pp::Font m_small_font; // this has to be a monospaced font
+    SDL2pp::Font m_small_font;
     std::vector<Collection> m_collections;
     float m_mouse_x;
     float m_mouse_y;
