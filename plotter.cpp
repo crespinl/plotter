@@ -17,6 +17,10 @@ bool Plotter::plot()
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
+        m_mouse_down = false;
+        m_arrow_cursor = SDL_GetCursor();
+        m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+        SDL_FreeCursor(nullptr);
         SDL_Event event;
         while (m_running)
         {
@@ -63,7 +67,22 @@ bool Plotter::plot()
                 }
                 else if (event.type == SDL_MOUSEMOTION)
                 {
+                    if (m_mouse_down)
+                    {
+                        m_x_offset += event.motion.xrel / m_zoom;
+                        m_y_offset -= event.motion.yrel / m_zoom;
+                    }
                     update_mouse_position();
+                }
+                else if (event.type == SDL_MOUSEBUTTONDOWN)
+                {
+                    m_mouse_down = true;
+                    SDL_SetCursor(m_size_cursor);
+                }
+                else if (event.type == SDL_MOUSEBUTTONUP)
+                {
+                    m_mouse_down = false;
+                    SDL_SetCursor(m_arrow_cursor);
                 }
             }
 
@@ -104,8 +123,9 @@ bool Plotter::plot()
     catch (exception const& e)
     {
         cerr << e.what() << endl;
-        return false;
     }
+    SDL_SetCursor(m_arrow_cursor);
+    SDL_FreeCursor(m_size_cursor);
     return true;
 }
 

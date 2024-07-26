@@ -2,6 +2,7 @@
 #include <SDL2pp/SDL2pp.hh>
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -36,6 +37,8 @@ public:
         , m_small_font("./firacode.ttf", small_font_size)
         , m_mouse_x(NAN)
         , m_mouse_y(NAN)
+        , m_size_cursor(nullptr)
+        , m_arrow_cursor(nullptr)
     { }
     bool plot();
     void add_collection(Collection const& c) { m_collections.push_back(c); }
@@ -72,6 +75,9 @@ private:
     std::vector<Collection> m_collections;
     float m_mouse_x;
     float m_mouse_y;
+    bool m_mouse_down;
+    SDL_Cursor* m_size_cursor;
+    SDL_Cursor* m_arrow_cursor;
 
     static constexpr int width = 800;
     static constexpr int height = 600;
