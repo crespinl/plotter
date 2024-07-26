@@ -268,8 +268,8 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     int x2 = p2.GetX();
     int y1 = p1.GetY();
     int y2 = p2.GetY();
-    Rect { hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the line
-    int const max_w = sqrt(width * width + height + height);
+    Rect { hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the
+    float const max_w = sqrt((float)width * (float)width + (float)height * (float)height);
     float w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;
     if (w_candidate > max_w)
