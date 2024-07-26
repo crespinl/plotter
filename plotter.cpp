@@ -178,7 +178,7 @@ void Plotter::draw_axis(Renderer& renderer)
     }
 }
 
-void Plotter::draw_point(int x, int y, Renderer& renderer)
+void Plotter::draw_point(float x, float y, Renderer& renderer)
 {
     int abscissa = to_plot_x(x);
     int ordinate = to_plot_y(y);
