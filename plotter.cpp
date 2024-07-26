@@ -254,7 +254,7 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
 {
     if (c.points.size() == 0)
         return;
-    renderer.SetDrawColor(c.color());
+    renderer.SetDrawColor(c.get_color());
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
         if ((to_plot_x(c.points[i].x) < hmargin && to_plot_x(c.points[i + 1].x) < hmargin)
@@ -330,7 +330,7 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     int offset = top_margin + height + plot_info_margin + info_margin;
     for (size_t i = 0; i < m_collections.size(); i++)
     {
-        renderer.SetDrawColor(m_collections[i].color());
+        renderer.SetDrawColor(m_collections[i].get_color());
         renderer.FillRect(Rect { hmargin, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
         Texture name = { renderer, m_small_font.RenderText_Blended(m_collections[i].name, SDL_Color(0, 0, 0, 255)) };
         renderer.Copy(name, NullOpt, { hmargin + m_small_font.GetHeight() + info_margin, offset });
@@ -341,5 +341,25 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
         string text = "x : " + to_str(m_mouse_x) + ", y : " + to_str(m_mouse_y);
         Texture mouse_sprite { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
         renderer.Copy(mouse_sprite, NullOpt, { hmargin, offset });
+    }
+}
+
+ColorGenerator::ColorGenerator()
+    : m_index(0)
+{ }
+
+Collection::Color ColorGenerator::get_color()
+{
+    Collection::Color c = colors[m_index];
+    m_index = (m_index + 1) % nb_colors;
+    return c;
+}
+
+void Plotter::add_collection(Collection const& c)
+{
+    m_collections.push_back(c);
+    if (! m_collections.back().color.definite)
+    {
+        m_collections.back().color = m_color_generator.get_color();
     }
 }

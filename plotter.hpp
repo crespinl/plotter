@@ -14,14 +14,54 @@ struct Coordinate
 
 struct Collection
 {
+    struct Color
+    {
+        constexpr Color()
+            : red(255)
+            , green(255)
+            , blue(255)
+            , definite(false)
+        { }
+        constexpr Color(uint8_t r, uint8_t g, uint8_t b)
+            : red(r)
+            , green(g)
+            , blue(b)
+            , definite(true)
+        { }
+        uint8_t red;
+        uint8_t green;
+        uint8_t blue;
+        bool definite;
+    };
     std::vector<Coordinate> points;
     std::string name;
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
+    Color color;
     bool draw_points { true };
     bool draw_lines { false };
-    SDL2pp::Color color() const { return SDL2pp::Color(red, green, blue, 255); }
+    SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
+};
+
+class ColorGenerator
+{
+public:
+    ColorGenerator();
+    Collection::Color get_color();
+    static constexpr int nb_colors = 10;
+    static constexpr Collection::Color colors[nb_colors] {
+        Collection::Color { 0, 72, 186 },    // Absolute zero
+        Collection::Color { 219, 45, 67 },   // Alizarin
+        Collection::Color { 123, 182, 97 },  // Bud green
+        Collection::Color { 230, 103, 206 }, // Brilliant rose
+        Collection::Color { 150, 75, 0 },    // Brown
+        Collection::Color { 204, 85, 0 },    // Burnt orange
+        Collection::Color { 189, 51, 164 },  // Byzantine
+        Collection::Color { 75, 54, 33 },    // Café noir
+        Collection::Color { 255, 239, 0 },   // Canary yellow
+        Collection::Color { 209, 190, 168 }  // Dark vanilla
+    };
+    // Source : https://en.wikipedia.org/wiki/List_of_colors_(compact)
+private:
+    int m_index;
 };
 
 class Plotter
@@ -41,7 +81,7 @@ public:
         , m_arrow_cursor(nullptr)
     { }
     bool plot();
-    void add_collection(Collection const& c) { m_collections.push_back(c); }
+    void add_collection(Collection const& c);
 
 private:
     void draw_axis(SDL2pp::Renderer& renderer);
@@ -78,6 +118,7 @@ private:
     bool m_mouse_down;
     SDL_Cursor* m_size_cursor;
     SDL_Cursor* m_arrow_cursor;
+    ColorGenerator m_color_generator;
 
     static constexpr int width = 800;
     static constexpr int height = 600;
