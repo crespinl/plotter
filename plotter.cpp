@@ -328,12 +328,25 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     // renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin + height + plot_info_margin, m_hmargin + width, top_margin + height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
 
     int offset = top_margin + height + plot_info_margin + info_margin;
-    for (size_t i = 0; i < m_collections.size(); i++)
+    size_t i = 0;
+    for (; i < m_collections.size(); i++)
     {
+        int hpos = (i % 2 == 0) ? 0 : width / 2;
         renderer.SetDrawColor(m_collections[i].get_color());
-        renderer.FillRect(Rect { m_hmargin, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
-        Texture name = { renderer, m_small_font.RenderText_Blended(m_collections[i].name, SDL_Color(0, 0, 0, 255)) };
-        renderer.Copy(name, NullOpt, { m_hmargin + m_small_font.GetHeight() + info_margin, offset });
+        renderer.FillRect(Rect { m_hmargin + hpos, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
+        string text = m_collections[i].name;
+        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > width / 2) // make sure it will not take too much space
+        {
+            int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - width / 2) / m_small_font_advance;
+            text = text.substr(0, text.size() - extra_chars - 4);
+            text += "...";
+        }
+        Texture name = { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
+        renderer.Copy(name, NullOpt, { m_hmargin + hpos + m_small_font.GetHeight() + info_margin, offset });
+        offset += (i % 2 == 0) ? 0 : info_margin + m_small_font.GetHeight();
+    }
+    if (i % 2 == 1)
+    {
         offset += info_margin + m_small_font.GetHeight();
     }
     if (!isnan(m_mouse_x))
@@ -358,7 +371,7 @@ Collection::Color ColorGenerator::get_color()
 void Plotter::add_collection(Collection const& c)
 {
     m_collections.push_back(c);
-    if (! m_collections.back().color.definite)
+    if (!m_collections.back().color.definite)
     {
         m_collections.back().color = m_color_generator.get_color();
     }
