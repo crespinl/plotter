@@ -71,7 +71,8 @@ public:
         : m_running(false)
         , m_x_offset(0.)
         , m_y_offset(0.)
-        , m_zoom(50.)
+        , m_x_zoom(25.)
+        , m_y_x_ratio(0.5)
         , m_title(title)
         , m_big_font("./notosans.ttf", big_font_size)
         , m_small_font("./firacode.ttf", small_font_size)
@@ -93,8 +94,8 @@ public:
 private:
     void draw_axis(SDL2pp::Renderer& renderer);
     void draw_point(float x, float y, SDL2pp::Renderer& renderer); // Absolute coordinates
-    int compute_x_offset() const { return m_x_offset * m_zoom; }
-    int compute_y_offset() const { return m_y_offset * m_zoom; }
+    int compute_x_offset() const { return m_x_offset * m_x_zoom; }
+    int compute_y_offset() const { return m_y_offset * y_zoom(); }
     int to_plot_x(float x) const;
     int to_plot_y(float y) const;
     float from_plot_x(int x) const;
@@ -111,10 +112,12 @@ private:
     int info_height() const { return (2 + m_collections.size()) * info_margin + (1 + m_collections.size()) * m_small_font.GetHeight(); }
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
+    float y_zoom() const { return m_x_zoom * m_y_x_ratio; }
     bool m_running;
-    float m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
-    float m_y_offset;
-    float m_zoom;
+    double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
+    double m_y_offset;
+    float m_x_zoom;
+    float m_y_x_ratio;
     std::string m_title;
     SDL2pp::SDLTTF m_ttf;
     SDL2pp::Font m_big_font;

@@ -37,22 +37,22 @@ bool Plotter::plot()
                     {
                     case SDLK_RIGHT:
                     {
-                        m_x_offset -= 10 / m_zoom;
+                        m_x_offset -= 10 / m_x_zoom;
                         break;
                     }
                     case SDLK_LEFT:
                     {
-                        m_x_offset += 10 / m_zoom;
+                        m_x_offset += 10 / m_x_zoom;
                         break;
                     }
                     case SDLK_UP:
                     {
-                        m_y_offset -= 10 / m_zoom;
+                        m_y_offset -= 10 / y_zoom();
                         break;
                     }
                     case SDLK_DOWN:
                     {
-                        m_y_offset += 10 / m_zoom;
+                        m_y_offset += 10 / y_zoom();
                         break;
                     }
                     default:
@@ -62,15 +62,15 @@ bool Plotter::plot()
                 }
                 else if (event.type == SDL_MOUSEWHEEL)
                 {
-                    m_zoom = min(max(m_zoom * pow(zoom_factor, event.wheel.preciseY), 2e-37f), 2e8f);
+                    m_x_zoom = min(max(m_x_zoom * pow(zoom_factor, event.wheel.preciseY), 2e-37f), 2e8f);
                     update_mouse_position();
                 }
                 else if (event.type == SDL_MOUSEMOTION)
                 {
                     if (m_mouse_down)
                     {
-                        m_x_offset += event.motion.xrel / m_zoom;
-                        m_y_offset -= event.motion.yrel / m_zoom;
+                        m_x_offset += event.motion.xrel / m_x_zoom;
+                        m_y_offset -= event.motion.yrel / y_zoom();
                     }
                     update_mouse_position();
                 }
@@ -202,19 +202,19 @@ void Plotter::draw_point(float x, float y, Renderer& renderer)
 
 int Plotter::to_plot_x(float x) const
 {
-    return width / 2 + x * m_zoom + compute_x_offset() + m_hmargin;
+    return width / 2 + x * m_x_zoom + compute_x_offset() + m_hmargin;
 }
 int Plotter::to_plot_y(float y) const
 {
-    return height / 2 - y * m_zoom - compute_y_offset() + top_margin;
+    return height / 2 - y * y_zoom() - compute_y_offset() + top_margin;
 }
 float Plotter::from_plot_x(int x) const
 {
-    return ((float)x - m_hmargin - (float)width / 2.) / m_zoom - m_x_offset;
+    return ((float)x - m_hmargin - (float)width / 2.) / m_x_zoom - m_x_offset;
 }
 float Plotter::from_plot_y(int x) const
 {
-    return (-x + top_margin + (float)height / 2.) / m_zoom - m_y_offset;
+    return (-x + top_margin + (float)height / 2.) / y_zoom() - m_y_offset;
 }
 bool Plotter::x_is_in_plot(int x) const
 {
