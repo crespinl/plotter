@@ -69,10 +69,6 @@ class Plotter
 public:
     Plotter(std::string const& title)
         : m_running(false)
-        , m_x_offset(0.)
-        , m_y_offset(0.)
-        , m_x_zoom(25.)
-        , m_y_x_ratio(0.5)
         , m_title(title)
         , m_big_font("./notosans.ttf", big_font_size)
         , m_small_font("./firacode.ttf", small_font_size)
@@ -113,6 +109,7 @@ private:
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
     float y_zoom() const { return m_x_zoom * m_y_x_ratio; }
+    void initialize_zoom_and_offset();
     bool m_running;
     double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     double m_y_offset;

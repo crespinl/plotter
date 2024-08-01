@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <iomanip>
@@ -21,6 +22,7 @@ bool Plotter::plot()
         m_arrow_cursor = SDL_GetCursor();
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
         SDL_FreeCursor(nullptr);
+        initialize_zoom_and_offset();
         SDL_Event event;
         while (m_running)
         {
@@ -375,4 +377,46 @@ void Plotter::add_collection(Collection const& c)
     {
         m_collections.back().color = m_color_generator.get_color();
     }
+}
+
+void Plotter::initialize_zoom_and_offset()
+{
+    // if (m_collections.size() != 0)
+
+    float x_max = m_collections.front().points.front().x;
+    float x_min = m_collections.front().points.front().x;
+    float y_max = m_collections.front().points.front().y;
+    float y_min = m_collections.front().points.front().y;
+    for (auto const& c : m_collections)
+    {
+        for (auto const& e : c.points)
+        {
+            if (e.x > x_max)
+            {
+                x_max = e.x;
+            }
+            if (e.x < x_min)
+            {
+                x_min = e.x;
+            }
+            if (e.y > y_max)
+            {
+                y_max = e.y;
+            }
+            if (e.y < y_min)
+            {
+                y_min = e.y;
+            }
+        }
+    }
+    float delta_x = x_max - x_min;
+    float delta_y = y_max - y_min;
+    m_x_zoom = (float)width / delta_x;
+    float _y_zoom = (float)height / delta_y;
+    m_y_x_ratio = _y_zoom / m_x_zoom;
+
+    m_x_zoom *= 0.9; // to have margins
+
+    m_x_offset = - (x_max + x_min) / 2;
+    m_y_offset = - (y_max + y_min) / 2;
 }

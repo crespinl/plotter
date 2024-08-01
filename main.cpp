@@ -17,6 +17,6 @@ int main(int argc, char* argv[])
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", {}, true, true });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, -8 } }, "A beautiful curve", {}, true, true });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", {}, true, true });
-    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, 8 } }, "A beautiful curve", {}, true, true });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", {}, true, true });
     return !plotter.plot();
 }
