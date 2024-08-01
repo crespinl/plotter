@@ -84,7 +84,7 @@ public:
             throw std::runtime_error("The small font has to be fixed width");
         }
     }
-    bool plot();
+    bool plot(bool same = false);
     void add_collection(Collection const& c);
 
 private:
@@ -109,7 +109,7 @@ private:
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
     float y_zoom() const { return m_x_zoom * m_y_x_ratio; }
-    void initialize_zoom_and_offset();
+    void initialize_zoom_and_offset(bool same);
     bool m_running;
     double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     double m_y_offset;

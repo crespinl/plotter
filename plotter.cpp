@@ -9,7 +9,7 @@
 using namespace std;
 using namespace SDL2pp;
 
-bool Plotter::plot()
+bool Plotter::plot(bool same)
 {
     try
     {
@@ -21,8 +21,7 @@ bool Plotter::plot()
         m_mouse_down = false;
         m_arrow_cursor = SDL_GetCursor();
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-        SDL_FreeCursor(nullptr);
-        initialize_zoom_and_offset();
+        initialize_zoom_and_offset(same);
         SDL_Event event;
         while (m_running)
         {
@@ -379,7 +378,7 @@ void Plotter::add_collection(Collection const& c)
     }
 }
 
-void Plotter::initialize_zoom_and_offset()
+void Plotter::initialize_zoom_and_offset(bool same)
 {
     // if (m_collections.size() != 0)
 
@@ -413,7 +412,13 @@ void Plotter::initialize_zoom_and_offset()
     float delta_y = y_max - y_min;
     m_x_zoom = (float)width / delta_x;
     float _y_zoom = (float)height / delta_y;
-    m_y_x_ratio = _y_zoom / m_x_zoom;
+    if (same)
+    {
+        m_x_zoom = min(m_x_zoom, _y_zoom);
+        m_y_x_ratio = 1;
+    }
+    else
+        m_y_x_ratio = _y_zoom / m_x_zoom;
 
     m_x_zoom *= 0.9; // to have margins
 
