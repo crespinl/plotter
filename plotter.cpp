@@ -94,7 +94,7 @@ bool Plotter::plot(bool same)
             renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin, m_hmargin + width, top_margin + height)); // Draw the plot box
             draw_info_box(renderer);
 
-            Texture title_sprite { renderer, m_big_font.RenderText_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
+            Texture title_sprite { renderer, m_big_font.RenderUTF8_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
             center_sprite(renderer, title_sprite, (width + 2 * m_hmargin) / 2, top_margin / 2);
 
             draw_axis(renderer);
@@ -179,7 +179,7 @@ void Plotter::draw_axis(Renderer& renderer)
     }
 
     // Draw main axis :
-    Texture zero_sprite { renderer, m_small_font.RenderText_Blended("0", SDL_Color(0, 0, 0, 255)) };
+    Texture zero_sprite { renderer, m_small_font.RenderUTF8_Blended("0", SDL_Color(0, 0, 0, 255)) };
     renderer.SetDrawColor(120, 120, 120, 255);
     if (y_is_in_plot(to_plot_y(0))) // abscissa
     {
@@ -228,13 +228,13 @@ bool Plotter::y_is_in_plot(int y) const
 
 void Plotter::draw_vertical_line_number(float nb, int x, SDL2pp::Renderer& renderer)
 {
-    Texture sprite { renderer, m_small_font.RenderText_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
+    Texture sprite { renderer, m_small_font.RenderUTF8_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
     center_sprite(renderer, sprite, x, top_margin + height + text_margin + sprite.GetHeight() / 2);
 }
 
 void Plotter::draw_horizontal_line_number(float nb, int y, SDL2pp::Renderer& renderer)
 {
-    Texture sprite { renderer, m_small_font.RenderText_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
+    Texture sprite { renderer, m_small_font.RenderUTF8_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
     center_sprite(renderer, sprite, m_hmargin - text_margin - sprite.GetWidth() / 2, y);
 }
 
@@ -342,7 +342,7 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
             text = text.substr(0, text.size() - extra_chars - 4);
             text += "...";
         }
-        Texture name = { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
+        Texture name = { renderer, m_small_font.RenderUTF8_Blended(text, SDL_Color(0, 0, 0, 255)) };
         renderer.Copy(name, NullOpt, { m_hmargin + hpos + m_small_font.GetHeight() + info_margin, offset });
         offset += (i % 2 == 0) ? 0 : info_margin + m_small_font.GetHeight();
     }
@@ -353,7 +353,7 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     if (!isnan(m_mouse_x))
     {
         string text = "x : " + to_str(m_mouse_x) + ", y : " + to_str(m_mouse_y);
-        Texture mouse_sprite { renderer, m_small_font.RenderText_Blended(text, SDL_Color(0, 0, 0, 255)) };
+        Texture mouse_sprite { renderer, m_small_font.RenderUTF8_Blended(text, SDL_Color(0, 0, 0, 255)) };
         renderer.Copy(mouse_sprite, NullOpt, { m_hmargin, offset });
     }
 }

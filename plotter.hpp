@@ -67,11 +67,11 @@ private:
 class Plotter
 {
 public:
-    Plotter(std::string const& title)
+    Plotter(std::string const& title, std::string const& big_font_path, std::string const& small_font_path)
         : m_running(false)
         , m_title(title)
-        , m_big_font("./notosans.ttf", big_font_size)
-        , m_small_font("./firacode.ttf", small_font_size)
+        , m_big_font(big_font_path, big_font_size)
+        , m_small_font(small_font_path, small_font_size)
         , m_mouse_x(NAN)
         , m_mouse_y(NAN)
         , m_size_cursor(nullptr)

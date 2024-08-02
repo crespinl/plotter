@@ -6,7 +6,7 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    Plotter plotter { "Plot test" };
+    Plotter plotter { "é", "./notosans.ttf", "./firacode.ttf" };
     vector<Coordinate> coordinates;
     for (int i = 0; i < 1000; i++)
     {
@@ -18,5 +18,5 @@ int main(int argc, char* argv[])
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, -8 } }, "A beautiful curve", {}, true, true });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", {}, true, true });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 200, 16 } }, "A beautiful curve", {}, true, true });
-    return !plotter.plot(true);
+    return !plotter.plot();
 }
