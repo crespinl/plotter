@@ -380,7 +380,14 @@ void Plotter::add_collection(Collection const& c)
 
 void Plotter::initialize_zoom_and_offset(bool same)
 {
-    // if (m_collections.size() != 0)
+    if (m_collections.size() == 0)
+    {
+        m_x_zoom = 50.;
+        m_y_x_ratio = 1.;
+        m_x_offset = 0.;
+        m_y_offset = 0.;
+        return;
+    }
 
     float x_max = m_collections.front().points.front().x;
     float x_min = m_collections.front().points.front().x;
