@@ -9,12 +9,17 @@ set(CMAKE_BUILD_TYPE "Debug")
 set(SRCS
     main.cpp
     plotter.cpp
+    fonts/firacode.cpp
+    fonts/notosans.cpp
     )
 
 set(HEADERS
     plotter.hpp
+    fonts/firacode.hpp
+    fonts/notosans.hpp
     )
 
 add_executable(plotter ${SRCS} ${HEADERS})
 target_include_directories(plotter PRIVATE "./")
+target_include_directories(plotter PRIVATE "./fonts/")
 target_link_libraries(plotter SDL2pp::SDL2pp)

@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <notosans.hpp>
+#include <firacode.hpp>
 
 struct Coordinate
 {
@@ -67,11 +69,13 @@ private:
 class Plotter
 {
 public:
-    Plotter(std::string const& title, std::string const& big_font_path, std::string const& small_font_path)
+    Plotter(std::string const& title)
         : m_running(false)
         , m_title(title)
-        , m_big_font(big_font_path, big_font_size)
-        , m_small_font(small_font_path, small_font_size)
+        , m_big_font_ops(SDL2pp::RWops::FromConstMem(notosans_ttf, notosans_ttf_len))
+        , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
+        , m_big_font(m_big_font_ops, big_font_size)
+        , m_small_font(m_small_font_ops, small_font_size)
         , m_mouse_x(NAN)
         , m_mouse_y(NAN)
         , m_size_cursor(nullptr)
@@ -117,6 +121,8 @@ private:
     float m_y_x_ratio;
     std::string m_title;
     SDL2pp::SDLTTF m_ttf;
+    SDL2pp::RWops m_big_font_ops;
+    SDL2pp::RWops m_small_font_ops;
     SDL2pp::Font m_big_font;
     SDL2pp::Font m_small_font;
     std::vector<Collection> m_collections;

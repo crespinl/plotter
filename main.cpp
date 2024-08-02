@@ -6,7 +6,7 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    Plotter plotter { "é", "./notosans.ttf", "./firacode.ttf" };
+    Plotter plotter { "Test Plot éàêë" };
     vector<Coordinate> coordinates;
     for (int i = 0; i < 1000; i++)
     {
