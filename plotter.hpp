@@ -70,7 +70,9 @@ class Plotter
 {
 public:
     Plotter(std::string const& title)
-        : m_running(false)
+        : m_width(800)
+        , m_height(600)
+        , m_running(false)
         , m_title(title)
         , m_big_font_ops(SDL2pp::RWops::FromConstMem(notosans_ttf, notosans_ttf_len))
         , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
@@ -115,6 +117,9 @@ private:
     float y_zoom() const { return m_x_zoom * m_y_x_ratio; }
     void initialize_zoom_and_offset(bool same);
     void draw_content(SDL2pp::Renderer& renderer);
+
+    int m_width;
+    int m_height;
     bool m_running;
     double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     double m_y_offset;
@@ -136,8 +141,6 @@ private:
     int m_small_font_advance;
     int m_hmargin;
 
-    static constexpr int width = 800;
-    static constexpr int height = 600;
     static constexpr int top_margin = 50;
     static constexpr int plot_info_margin = 25;
     static constexpr int info_margin = 5;
@@ -148,6 +151,8 @@ private:
     static constexpr int big_font_size = 24;
     static constexpr int small_font_size = 15;
     static constexpr int text_margin = 5;
+    static constexpr int min_width = 160;
+    static constexpr int min_height = 120;
 };
 
 /*

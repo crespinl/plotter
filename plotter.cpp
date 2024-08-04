@@ -14,7 +14,8 @@ bool Plotter::plot(bool same)
     try
     {
         SDL sdl(SDL_INIT_VIDEO);
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * m_hmargin + width, top_margin + height + plot_info_margin + info_height() + bottom_margin, SDL_WINDOW_SHOWN);
+        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * m_hmargin + m_width, top_margin + m_height + plot_info_margin + info_height() + bottom_margin, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        window.SetMinimumSize(2 * m_hmargin + min_width, top_margin + min_height + plot_info_margin + info_height() + bottom_margin);
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
@@ -85,17 +86,33 @@ bool Plotter::plot(bool same)
                     m_mouse_down = false;
                     SDL_SetCursor(m_arrow_cursor);
                 }
+                else if (event.type == SDL_WINDOWEVENT)
+                {
+                    switch (event.window.event)
+                    {
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    {
+                        m_width = event.window.data1 - 2 * m_hmargin;
+                        m_height = event.window.data2 - top_margin - plot_info_margin - info_height() - bottom_margin;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
             }
 
             renderer.SetDrawColor(255, 255, 255, 255); // Clear the screen
             renderer.Clear();
 
             renderer.SetDrawColor(0, 0, 0, 255);
-            renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin, m_hmargin + width, top_margin + height)); // Draw the plot box
+            renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin, m_hmargin + m_width, top_margin + m_height)); // Draw the plot box
             draw_info_box(renderer);
 
             Texture title_sprite { renderer, m_big_font.RenderUTF8_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
-            center_sprite(renderer, title_sprite, (width + 2 * m_hmargin) / 2, top_margin / 2);
+            center_sprite(renderer, title_sprite, (m_width + 2 * m_hmargin) / 2, top_margin / 2);
 
             draw_axis(renderer);
 
@@ -122,7 +139,7 @@ bool Plotter::plot(bool same)
 
 void Plotter::draw_content(SDL2pp::Renderer& renderer)
 {
-    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_hmargin + width, top_margin + height };
+    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_hmargin + m_width, top_margin + m_height };
     sprite.SetBlendMode(SDL_BLENDMODE_BLEND);
     renderer.SetTarget(sprite);
     renderer.SetDrawColor(0, 0, 0, 0);
@@ -132,21 +149,37 @@ void Plotter::draw_content(SDL2pp::Renderer& renderer)
     {
         plot_collection(e, renderer, sprite);
     }
-    renderer.Copy(sprite, Rect { m_hmargin, top_margin, width, height }, { m_hmargin, top_margin });
+    renderer.Copy(sprite, Rect { m_hmargin, top_margin, m_width, m_height }, { m_hmargin, top_margin });
 }
 
 void Plotter::draw_axis(Renderer& renderer)
 {
     int x_offset = compute_x_offset();
     int y_offset = compute_y_offset();
-    // Draw secondary axis :
-    int nb_vertical_axis = width / 130;
-    int nb_horizontal_axis = height / 130;
 
-    float x_max = from_plot_x(width);
+    auto draw_main_axis = [&]() {
+        Texture zero_sprite { renderer, m_small_font.RenderUTF8_Blended("0", SDL_Color(0, 0, 0, 255)) };
+        renderer.SetDrawColor(120, 120, 120, 255);
+        if (y_is_in_plot(to_plot_y(0))) // abscissa
+        {
+            draw_horizontal_line_number(0., to_plot_y(0.), renderer);
+            renderer.FillRect(Rect::FromCorners(m_hmargin, to_plot_y(0) - line_width_half, m_hmargin + m_width, to_plot_y(0) + line_width_half));
+        }
+        if (x_is_in_plot(to_plot_x(0))) // ordinate
+        {
+            draw_vertical_line_number(0., to_plot_x(0.), renderer);
+            renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + m_height));
+        }
+    };
+
+    // Draw secondary axis :
+    int nb_vertical_axis = m_width / 130;
+    int nb_horizontal_axis = m_height / 130;
+
+    float x_max = from_plot_x(m_width);
     float x_min = from_plot_x(0);
     float y_max = from_plot_y(0);
-    float y_min = from_plot_y(height);
+    float y_min = from_plot_y(m_height);
 
     float delta_x = x_max - x_min;
     float delta_y = y_max - y_min;
@@ -154,6 +187,11 @@ void Plotter::draw_axis(Renderer& renderer)
     float x_step = pow(10., round(log10(delta_x) - 1));
     float y_step = pow(10., round(log10(delta_y) - 1));
 
+    if (x_step == 0 || y_step == 0 || nb_vertical_axis == 0 || nb_horizontal_axis == 0)
+    { // Not enough space to draw secondary axis
+        draw_main_axis();
+        return;
+    }
     int nb_vertical = delta_x / x_step + 1;
     int nb_horizontal = delta_y / y_step + 1;
 
@@ -170,7 +208,7 @@ void Plotter::draw_axis(Renderer& renderer)
         if (y_is_in_plot(ordinate))
         {
             draw_horizontal_line_number(rounded_y_min + i * y_step, ordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(m_hmargin, ordinate - line_width_half, m_hmargin + width, ordinate + line_width_half));
+            renderer.FillRect(Rect::FromCorners(m_hmargin, ordinate - line_width_half, m_hmargin + m_width, ordinate + line_width_half));
         }
     }
     for (int i = 0; i < nb_vertical_axis; i++)
@@ -179,23 +217,10 @@ void Plotter::draw_axis(Renderer& renderer)
         if (x_is_in_plot(abscissa))
         {
             draw_vertical_line_number(rounded_x_min + i * x_step, abscissa, renderer);
-            renderer.FillRect(Rect::FromCorners(abscissa - line_width_half, top_margin, abscissa + line_width_half, top_margin + height));
+            renderer.FillRect(Rect::FromCorners(abscissa - line_width_half, top_margin, abscissa + line_width_half, top_margin + m_height));
         }
     }
-
-    // Draw main axis :
-    Texture zero_sprite { renderer, m_small_font.RenderUTF8_Blended("0", SDL_Color(0, 0, 0, 255)) };
-    renderer.SetDrawColor(120, 120, 120, 255);
-    if (y_is_in_plot(to_plot_y(0))) // abscissa
-    {
-        draw_horizontal_line_number(0., to_plot_y(0.), renderer);
-        renderer.FillRect(Rect::FromCorners(m_hmargin, to_plot_y(0) - line_width_half, m_hmargin + width, to_plot_y(0) + line_width_half));
-    }
-    if (x_is_in_plot(to_plot_x(0))) // ordinate
-    {
-        draw_vertical_line_number(0., to_plot_x(0.), renderer);
-        renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + height));
-    }
+    draw_main_axis();
 }
 
 void Plotter::draw_point(float x, float y, Renderer& renderer)
@@ -208,33 +233,33 @@ void Plotter::draw_point(float x, float y, Renderer& renderer)
 
 int Plotter::to_plot_x(float x) const
 {
-    return width / 2 + x * m_x_zoom + compute_x_offset() + m_hmargin;
+    return m_width / 2 + x * m_x_zoom + compute_x_offset() + m_hmargin;
 }
 int Plotter::to_plot_y(float y) const
 {
-    return height / 2 - y * y_zoom() - compute_y_offset() + top_margin;
+    return m_height / 2 - y * y_zoom() - compute_y_offset() + top_margin;
 }
 float Plotter::from_plot_x(int x) const
 {
-    return ((float)x - m_hmargin - (float)width / 2.) / m_x_zoom - m_x_offset;
+    return ((float)x - m_hmargin - (float)m_width / 2.) / m_x_zoom - m_x_offset;
 }
 float Plotter::from_plot_y(int x) const
 {
-    return (-x + top_margin + (float)height / 2.) / y_zoom() - m_y_offset;
+    return (-x + top_margin + (float)m_height / 2.) / y_zoom() - m_y_offset;
 }
 bool Plotter::x_is_in_plot(int x) const
 {
-    return x > m_hmargin && x < m_hmargin + width;
+    return x > m_hmargin && x < m_hmargin + m_width;
 }
 bool Plotter::y_is_in_plot(int y) const
 {
-    return y > top_margin && y < top_margin + height;
+    return y > top_margin && y < top_margin + m_height;
 }
 
 void Plotter::draw_vertical_line_number(float nb, int x, SDL2pp::Renderer& renderer)
 {
     Texture sprite { renderer, m_small_font.RenderUTF8_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
-    center_sprite(renderer, sprite, x, top_margin + height + text_margin + sprite.GetHeight() / 2);
+    center_sprite(renderer, sprite, x, top_margin + m_height + text_margin + sprite.GetHeight() / 2);
 }
 
 void Plotter::draw_horizontal_line_number(float nb, int y, SDL2pp::Renderer& renderer)
@@ -264,9 +289,9 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
         if ((to_plot_x(c.points[i].x) < m_hmargin && to_plot_x(c.points[i + 1].x) < m_hmargin)
-            || (to_plot_x(c.points[i].x) > m_hmargin + width && to_plot_x(c.points[i + 1].x) > m_hmargin + width)
+            || (to_plot_x(c.points[i].x) > m_hmargin + m_width && to_plot_x(c.points[i + 1].x) > m_hmargin + m_width)
             || (to_plot_y(c.points[i].y) < top_margin && to_plot_y(c.points[i + 1].y) < top_margin)
-            || (to_plot_y(c.points[i].y) > top_margin + height && to_plot_y(c.points[i + 1].y) > top_margin + height))
+            || (to_plot_y(c.points[i].y) > top_margin + m_height && to_plot_y(c.points[i + 1].y) > top_margin + m_height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
         if (c.draw_points)
             draw_point(c.points[i].x, c.points[i].y, renderer);
@@ -288,8 +313,8 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     int x2 = p2.GetX();
     int y1 = p1.GetY();
     int y2 = p2.GetY();
-    Rect { m_hmargin, top_margin, width, height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the
-    float const max_w = sqrt((float)width * (float)width + (float)height * (float)height);
+    Rect { m_hmargin, top_margin, m_width, m_height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the
+    float const max_w = sqrt((float)m_width * (float)m_width + (float)m_height * (float)m_height);
     float w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;
     if (w_candidate > max_w)
@@ -331,19 +356,19 @@ void Plotter::update_mouse_position()
 void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
 {
     // renderer.SetDrawColor(0, 0, 0, 255);
-    // renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin + height + plot_info_margin, m_hmargin + width, top_margin + height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
+    // renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin + m_height + plot_info_margin, m_hmargin + m_width, top_margin + m_height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
 
-    int offset = top_margin + height + plot_info_margin + info_margin;
+    int offset = top_margin + m_height + plot_info_margin + info_margin;
     size_t i = 0;
     for (; i < m_collections.size(); i++)
     {
-        int hpos = (i % 2 == 0) ? 0 : width / 2;
+        int hpos = (i % 2 == 0) ? 0 : m_width / 2;
         renderer.SetDrawColor(m_collections[i].get_color());
         renderer.FillRect(Rect { m_hmargin + hpos, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
         string text = m_collections[i].name;
-        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > width / 2) // make sure it will not take too much space
+        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > m_width / 2) // make sure it will not take too much space
         {
-            int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - width / 2) / m_small_font_advance;
+            int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - m_width / 2) / m_small_font_advance;
             text = text.substr(0, text.size() - extra_chars - 4);
             text += "...";
         }
@@ -422,8 +447,8 @@ void Plotter::initialize_zoom_and_offset(bool same)
     }
     float delta_x = x_max - x_min;
     float delta_y = y_max - y_min;
-    m_x_zoom = (float)width / delta_x;
-    float _y_zoom = (float)height / delta_y;
+    m_x_zoom = (float)m_width / delta_x;
+    float _y_zoom = (float)m_height / delta_y;
     if (same)
     {
         m_x_zoom = min(m_x_zoom, _y_zoom);
