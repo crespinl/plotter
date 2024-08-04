@@ -99,17 +99,7 @@ bool Plotter::plot(bool same)
 
             draw_axis(renderer);
 
-            Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_hmargin + width, top_margin + height };
-            sprite.SetBlendMode(SDL_BLENDMODE_BLEND);
-            renderer.SetTarget(sprite);
-            renderer.SetDrawColor(0, 0, 0, 0);
-            renderer.Clear();
-            renderer.SetTarget();
-            for (auto const& e : m_collections)
-            {
-                plot_collection(e, renderer, sprite);
-            }
-            renderer.Copy(sprite, Rect { m_hmargin, top_margin, width, height }, { m_hmargin, top_margin });
+            draw_content(renderer);
 
             renderer.Present();
 
@@ -128,6 +118,21 @@ bool Plotter::plot(bool same)
     SDL_SetCursor(m_arrow_cursor);
     SDL_FreeCursor(m_size_cursor);
     return true;
+}
+
+void Plotter::draw_content(SDL2pp::Renderer& renderer)
+{
+    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_hmargin + width, top_margin + height };
+    sprite.SetBlendMode(SDL_BLENDMODE_BLEND);
+    renderer.SetTarget(sprite);
+    renderer.SetDrawColor(0, 0, 0, 0);
+    renderer.Clear();
+    renderer.SetTarget();
+    for (auto const& e : m_collections)
+    {
+        plot_collection(e, renderer, sprite);
+    }
+    renderer.Copy(sprite, Rect { m_hmargin, top_margin, width, height }, { m_hmargin, top_margin });
 }
 
 void Plotter::draw_axis(Renderer& renderer)
@@ -429,6 +434,6 @@ void Plotter::initialize_zoom_and_offset(bool same)
 
     m_x_zoom *= 0.9; // to have margins
 
-    m_x_offset = - (x_max + x_min) / 2;
-    m_y_offset = - (y_max + y_min) / 2;
+    m_x_offset = -(x_max + x_min) / 2;
+    m_y_offset = -(y_max + y_min) / 2;
 }

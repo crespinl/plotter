@@ -114,6 +114,7 @@ private:
     void draw_info_box(SDL2pp::Renderer& renderer);
     float y_zoom() const { return m_x_zoom * m_y_x_ratio; }
     void initialize_zoom_and_offset(bool same);
+    void draw_content(SDL2pp::Renderer& renderer);
     bool m_running;
     double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     double m_y_offset;
