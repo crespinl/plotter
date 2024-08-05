@@ -111,7 +111,7 @@ private:
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     SDL2pp::Point to_point(Coordinate const& c) const;
     void draw_line(SDL2pp::Point const& p1, SDL2pp::Point const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
-    int info_height() const { return (2 + m_collections.size()) * info_margin + (1 + m_collections.size()) * m_small_font.GetHeight(); }
+    int info_height() const { return (2 + m_collections.size()) * info_margin + (1 + m_collections.size() / 2) * m_small_font.GetHeight(); } // 2* trop
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
     float y_zoom() const { return m_x_zoom * m_y_x_ratio; }
