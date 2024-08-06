@@ -124,7 +124,6 @@ bool Plotter::plot(bool same)
             auto end = chrono::steady_clock::now();
             std::chrono::duration<double> diff = end - start;
             int duration_ms = round(diff.count() * 1000);
-            cout << duration_ms << endl;
             int to_wait = max(40 - duration_ms, 0); // Make the whole iteration take at least 1/25 s
             this_thread::sleep_for(chrono::milliseconds(to_wait));
         }
@@ -285,6 +284,7 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
         return;
     renderer.SetDrawColor(c.get_color());
     unordered_map<int, Texture> textures_pool; // OPTIMIZATION : since draw_line rarely needs a lot of Textures of different size, store them
+    renderer.SetTarget(into);
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
         if ((to_plot_x(c.points[i].x) < m_hmargin && to_plot_x(c.points[i + 1].x) < m_hmargin)
@@ -299,6 +299,7 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     }
     if (c.draw_points)
         draw_point(c.points.back().x, c.points.back().y, renderer);
+    renderer.SetTarget();
 }
 
 SDL2pp::Point Plotter::to_point(Coordinate const& c) const
@@ -337,7 +338,6 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
     angle *= 360 / (2 * numbers::pi_v<float>);                                                                                               // to degree
     renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
-    renderer.SetTarget();
 }
 
 void Plotter::update_mouse_position()
