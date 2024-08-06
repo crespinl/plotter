@@ -124,6 +124,7 @@ bool Plotter::plot(bool same)
             auto end = chrono::steady_clock::now();
             std::chrono::duration<double> diff = end - start;
             int duration_ms = round(diff.count() * 1000);
+            cout << duration_ms << endl;
             int to_wait = max(40 - duration_ms, 0); // Make the whole iteration take at least 1/25 s
             this_thread::sleep_for(chrono::milliseconds(to_wait));
         }
@@ -324,18 +325,18 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
         w = static_cast<int>(w_candidate);
     }
     float angle = atan2(y2 - y1, x2 - x1);
-    if (!textures_pool.contains(w)) // Makes sure the pool contains the needed size
+    auto texture = textures_pool.find(w);
+    if (texture == textures_pool.end()) // Makes sure the pool contains the needed size
     {
         Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 4 * line_width_half };
         renderer.SetTarget(sprite);
         renderer.Clear();
         renderer.SetTarget(into);
-        textures_pool.insert({ w, move(sprite) });
+        texture = textures_pool.insert({ w, move(sprite) }).first;
     }
-    Texture& sprite = textures_pool.at(w);
     Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
     angle *= 360 / (2 * numbers::pi_v<float>);                                                                                               // to degree
-    renderer.Copy(sprite, NullOpt, dst_point, angle, Point { 0, 0 });
+    renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
     renderer.SetTarget();
 }
 
