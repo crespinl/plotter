@@ -154,9 +154,6 @@ void Plotter::draw_content(SDL2pp::Renderer& renderer)
 
 void Plotter::draw_axis(Renderer& renderer)
 {
-    int x_offset = compute_x_offset();
-    int y_offset = compute_y_offset();
-
     auto draw_main_axis = [&]() {
         Texture zero_sprite { renderer, m_small_font.RenderUTF8_Blended("0", SDL_Color(0, 0, 0, 255)) };
         renderer.SetDrawColor(120, 120, 120, 255);
@@ -366,7 +363,7 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
         renderer.SetDrawColor(m_collections[i].get_color());
         renderer.FillRect(Rect { m_hmargin + hpos, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
         string text = m_collections[i].name;
-        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > m_width / 2) // make sure it will not take too much space
+        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)m_width / 2) // make sure it will not take too much space
         {
             int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - m_width / 2) / m_small_font_advance;
             text = text.substr(0, text.size() - extra_chars - 4);

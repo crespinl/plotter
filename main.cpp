@@ -4,7 +4,7 @@
 using namespace SDL2pp;
 using namespace std;
 
-int main(int argc, char* argv[])
+int main()
 {
     Plotter plotter { "Test Plot éàêë" };
     vector<Coordinate> coordinates;
