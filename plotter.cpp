@@ -283,6 +283,7 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     if (c.points.size() == 0)
         return;
     renderer.SetDrawColor(c.get_color());
+    unordered_map<int, Texture> textures_pool; // OPTIMIZATION : since draw_line rarely needs a lot of Textures of different size, store them
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
         if ((to_plot_x(c.points[i].x) < m_hmargin && to_plot_x(c.points[i + 1].x) < m_hmargin)
@@ -293,7 +294,7 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
         if (c.draw_points)
             draw_point(c.points[i].x, c.points[i].y, renderer);
         if (c.draw_lines)
-            draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into);
+            draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into, textures_pool);
     }
     if (c.draw_points)
         draw_point(c.points.back().x, c.points.back().y, renderer);
@@ -304,7 +305,7 @@ SDL2pp::Point Plotter::to_point(Coordinate const& c) const
     return { to_plot_x(c.x), to_plot_y(c.y) };
 }
 
-void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Texture& into)
+void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Texture& into, unordered_map<int, Texture>& textures_pool)
 {
     int x1 = p1.GetX();
     int x2 = p2.GetX();
@@ -323,10 +324,15 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
         w = static_cast<int>(w_candidate);
     }
     float angle = atan2(y2 - y1, x2 - x1);
-    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 4 * line_width_half };
-    renderer.SetTarget(sprite);
-    renderer.Clear();
-    renderer.SetTarget(into);
+    if (!textures_pool.contains(w)) // Makes sure the pool contains the needed size
+    {
+        Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 4 * line_width_half };
+        renderer.SetTarget(sprite);
+        renderer.Clear();
+        renderer.SetTarget(into);
+        textures_pool.insert({ w, move(sprite) });
+    }
+    Texture& sprite = textures_pool.at(w);
     Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
     angle *= 360 / (2 * numbers::pi_v<float>);                                                                                               // to degree
     renderer.Copy(sprite, NullOpt, dst_point, angle, Point { 0, 0 });
