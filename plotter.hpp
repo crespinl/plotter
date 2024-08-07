@@ -98,7 +98,7 @@ private:
     void draw_axis(SDL2pp::Renderer& renderer);
     void draw_point(float x, float y, SDL2pp::Renderer& renderer); // Absolute coordinates
     int compute_x_offset() const { return m_x_offset * m_x_zoom; }
-    int compute_y_offset() const { return m_y_offset * y_zoom(); }
+    int compute_y_offset() const { return m_y_offset * m_y_zoom; }
     int to_plot_x(float x) const;
     int to_plot_y(float y) const;
     float from_plot_x(int x) const;
@@ -115,7 +115,6 @@ private:
     int info_height() const { return (2 + m_collections.size()) * info_margin + (1 + m_collections.size() / 2) * m_small_font.GetHeight(); }
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
-    float y_zoom() const { return m_x_zoom * m_y_x_ratio; }
     void initialize_zoom_and_offset(bool same);
     void draw_content(SDL2pp::Renderer& renderer);
 
@@ -125,7 +124,8 @@ private:
     double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     double m_y_offset;
     float m_x_zoom;
-    float m_y_x_ratio;
+    float m_y_x_ratio; // This is the interesting data
+    float m_y_zoom; // This is a cached value
     std::string m_title;
     SDL2pp::SDLTTF m_ttf;
     SDL2pp::RWops m_big_font_ops;
