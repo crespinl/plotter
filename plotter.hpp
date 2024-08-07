@@ -97,8 +97,6 @@ public:
 private:
     void draw_axis(SDL2pp::Renderer& renderer);
     void draw_point(float x, float y, SDL2pp::Renderer& renderer); // Absolute coordinates
-    int compute_x_offset() const { return m_x_offset * m_x_zoom; }
-    int compute_y_offset() const { return m_y_offset * m_y_zoom; }
     int to_plot_x(float x) const;
     int to_plot_y(float y) const;
     float from_plot_x(int x) const;

@@ -232,11 +232,11 @@ void Plotter::draw_point(float x, float y, Renderer& renderer)
 
 int Plotter::to_plot_x(float x) const
 {
-    return m_width / 2 + x * m_x_zoom + compute_x_offset() + m_hmargin;
+    return m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin;
 }
 int Plotter::to_plot_y(float y) const
 {
-    return m_height / 2 - y * m_y_zoom - compute_y_offset() + top_margin;
+    return m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin;
 }
 float Plotter::from_plot_x(int x) const
 {
