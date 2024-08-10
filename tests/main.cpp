@@ -23,9 +23,9 @@ using namespace std;
 
 int main()
 {
-    plotter::Plotter plotter { "Test Plot éàêë" };
+    plotter::Plotter plotter { "Test Plot" };
     vector<plotter::Coordinate> coordinates;
-    for (int i = 0; i < 100'000; i++)
+    for (int i = 0; i < 10'000; i++)
     {
         float v = (float)i / 1000.;
         coordinates.push_back({ v, sin(v) });

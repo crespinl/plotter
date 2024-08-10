@@ -32,8 +32,8 @@ namespace plotter
 
 struct Coordinate
 {
-    float x;
-    float y;
+    double x;
+    double y;
 };
 
 struct Collection
@@ -117,17 +117,17 @@ public:
 
 private:
     void draw_axis(SDL2pp::Renderer& renderer);
-    void draw_point(float x, float y, SDL2pp::Renderer& renderer); // Absolute coordinates
-    int to_plot_x(float x) const;
-    int to_plot_y(float y) const;
-    float from_plot_x(int x) const;
-    float from_plot_y(int x) const;
+    void draw_point(double x, double y, SDL2pp::Renderer& renderer); // Absolute coordinates
+    int to_plot_x(double x) const;
+    int to_plot_y(double y) const;
+    double from_plot_x(int x) const;
+    double from_plot_y(int x) const;
     bool x_is_in_plot(int x) const;
     bool y_is_in_plot(int y) const;
-    void draw_vertical_line_number(float nb, int x, SDL2pp::Renderer& renderer);
-    void draw_horizontal_line_number(float nb, int y, SDL2pp::Renderer& renderer);
+    void draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer);
+    void draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer);
     void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
-    std::string to_str(float nb);
+    std::string to_str(double nb);
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     SDL2pp::Point to_point(Coordinate const& c) const;
     void draw_line(SDL2pp::Point const& p1, SDL2pp::Point const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, std::unordered_map<int, SDL2pp::Texture>& textures_pool);
@@ -142,9 +142,9 @@ private:
     bool m_running;
     double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     double m_y_offset;
-    float m_x_zoom;
-    float m_y_x_ratio; // This is the interesting data
-    float m_y_zoom;    // This is a cached value
+    double m_x_zoom;
+    double m_y_x_ratio; // This is the interesting data
+    double m_y_zoom;    // This is a cached value
     std::string m_title;
     SDL2pp::SDLTTF m_ttf;
     SDL2pp::RWops m_big_font_ops;
@@ -152,8 +152,8 @@ private:
     SDL2pp::Font m_big_font;
     SDL2pp::Font m_small_font;
     std::vector<Collection> m_collections;
-    float m_mouse_x;
-    float m_mouse_y;
+    double m_mouse_x;
+    double m_mouse_y;
     bool m_mouse_down;
     SDL_Cursor* m_size_cursor;
     SDL_Cursor* m_arrow_cursor;
@@ -167,7 +167,7 @@ private:
     static constexpr int bottom_margin = 25;
     static constexpr int line_width_half = 1;
     static constexpr int half_point_size = 4;
-    static constexpr float zoom_factor = 1.3;
+    static constexpr double zoom_factor = 1.3;
     static constexpr int big_font_size = 24;
     static constexpr int small_font_size = 15;
     static constexpr int text_margin = 5;

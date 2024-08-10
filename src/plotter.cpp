@@ -85,7 +85,7 @@ bool Plotter::plot(bool same)
                 }
                 else if (event.type == SDL_MOUSEWHEEL)
                 {
-                    m_x_zoom = min(max(m_x_zoom * pow(zoom_factor, event.wheel.preciseY), 2e-37f), 2e8f);
+                    m_x_zoom = min(max(m_x_zoom * pow(zoom_factor, event.wheel.preciseY), 2e-37), 2e8);
                     m_y_zoom = m_x_zoom * m_y_x_ratio;
                     update_mouse_position();
                 }
@@ -195,16 +195,16 @@ void Plotter::draw_axis(Renderer& renderer)
     int nb_vertical_axis = m_width / 130;
     int nb_horizontal_axis = m_height / 130;
 
-    float x_max = from_plot_x(m_width);
-    float x_min = from_plot_x(0);
-    float y_max = from_plot_y(0);
-    float y_min = from_plot_y(m_height);
+    double x_max = from_plot_x(m_width);
+    double x_min = from_plot_x(0);
+    double y_max = from_plot_y(0);
+    double y_min = from_plot_y(m_height);
 
-    float delta_x = x_max - x_min;
-    float delta_y = y_max - y_min;
+    double delta_x = x_max - x_min;
+    double delta_y = y_max - y_min;
 
-    float x_step = pow(10., round(log10(delta_x) - 1));
-    float y_step = pow(10., round(log10(delta_y) - 1));
+    double x_step = pow(10., round(log10(delta_x) - 1));
+    double y_step = pow(10., round(log10(delta_y) - 1));
 
     if (x_step == 0 || y_step == 0 || nb_vertical_axis == 0 || nb_horizontal_axis == 0)
     { // Not enough space to draw secondary axis
@@ -217,8 +217,8 @@ void Plotter::draw_axis(Renderer& renderer)
     x_step *= nb_vertical / nb_vertical_axis + 1;
     y_step *= nb_horizontal / nb_horizontal_axis + 1;
 
-    float rounded_x_min = round(x_min / x_step) * x_step;
-    float rounded_y_min = round(y_min / y_step) * y_step;
+    double rounded_x_min = round(x_min / x_step) * x_step;
+    double rounded_y_min = round(y_min / y_step) * y_step;
 
     renderer.SetDrawColor(180, 180, 180, 255);
     for (int i = 0; i < nb_horizontal_axis; i++)
@@ -242,7 +242,7 @@ void Plotter::draw_axis(Renderer& renderer)
     draw_main_axis();
 }
 
-void Plotter::draw_point(float x, float y, Renderer& renderer)
+void Plotter::draw_point(double x, double y, Renderer& renderer)
 {
     int abscissa = to_plot_x(x);
     int ordinate = to_plot_y(y);
@@ -250,21 +250,21 @@ void Plotter::draw_point(float x, float y, Renderer& renderer)
         renderer.FillRect(Rect::FromCorners(abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size));
 }
 
-int Plotter::to_plot_x(float x) const
+int Plotter::to_plot_x(double x) const
 {
     return m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin;
 }
-int Plotter::to_plot_y(float y) const
+int Plotter::to_plot_y(double y) const
 {
     return m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin;
 }
-float Plotter::from_plot_x(int x) const
+double Plotter::from_plot_x(int x) const
 {
-    return ((float)x - m_hmargin - (float)m_width / 2.) / m_x_zoom - m_x_offset;
+    return ((double)x - m_hmargin - (double)m_width / 2.) / m_x_zoom - m_x_offset;
 }
-float Plotter::from_plot_y(int x) const
+double Plotter::from_plot_y(int x) const
 {
-    return (-x + top_margin + (float)m_height / 2.) / m_y_zoom - m_y_offset;
+    return (-x + top_margin + (double)m_height / 2.) / m_y_zoom - m_y_offset;
 }
 bool Plotter::x_is_in_plot(int x) const
 {
@@ -275,13 +275,13 @@ bool Plotter::y_is_in_plot(int y) const
     return y > top_margin && y < top_margin + m_height;
 }
 
-void Plotter::draw_vertical_line_number(float nb, int x, SDL2pp::Renderer& renderer)
+void Plotter::draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer)
 {
     Texture sprite { renderer, m_small_font.RenderUTF8_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
     center_sprite(renderer, sprite, x, top_margin + m_height + text_margin + sprite.GetHeight() / 2);
 }
 
-void Plotter::draw_horizontal_line_number(float nb, int y, SDL2pp::Renderer& renderer)
+void Plotter::draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer)
 {
     Texture sprite { renderer, m_small_font.RenderUTF8_Blended(to_str(nb), SDL_Color(0, 0, 0, 255)) };
     center_sprite(renderer, sprite, m_hmargin - text_margin - sprite.GetWidth() / 2, y);
@@ -292,7 +292,7 @@ void Plotter::center_sprite(Renderer& renderer, Texture& texture, int x, int y)
     renderer.Copy(texture, NullOpt, { x - texture.GetWidth() / 2, y - texture.GetHeight() / 2 });
 }
 
-std::string Plotter::to_str(float nb)
+std::string Plotter::to_str(double nb)
 {
     ostringstream out;
     out << setprecision(5);
@@ -336,8 +336,8 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     int y1 = p1.GetY();
     int y2 = p2.GetY();
     Rect { m_hmargin, top_margin, m_width, m_height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the
-    float const max_w = sqrt((float)m_width * (float)m_width + (float)m_height * (float)m_height);
-    float w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
+    double const max_w = sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height);
+    double w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;
     if (w_candidate > max_w)
     {
@@ -347,7 +347,7 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     {
         w = static_cast<int>(w_candidate);
     }
-    float angle = atan2(y2 - y1, x2 - x1);
+    double angle = atan2(y2 - y1, x2 - x1);
     auto texture = textures_pool.find(w);
     if (texture == textures_pool.end()) // Makes sure the pool contains the needed size
     {
@@ -358,7 +358,7 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
         texture = textures_pool.insert({ w, move(sprite) }).first;
     }
     Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
-    angle *= 360 / (2 * numbers::pi_v<float>);                                                                                               // to degree
+    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                               // to degree
     renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
 }
 
@@ -446,10 +446,10 @@ void Plotter::initialize_zoom_and_offset(bool same)
         return;
     }
 
-    float x_max = m_collections.front().points.front().x;
-    float x_min = m_collections.front().points.front().x;
-    float y_max = m_collections.front().points.front().y;
-    float y_min = m_collections.front().points.front().y;
+    double x_max = m_collections.front().points.front().x;
+    double x_min = m_collections.front().points.front().x;
+    double y_max = m_collections.front().points.front().y;
+    double y_min = m_collections.front().points.front().y;
     for (auto const& c : m_collections)
     {
         for (auto const& e : c.points)
@@ -472,10 +472,10 @@ void Plotter::initialize_zoom_and_offset(bool same)
             }
         }
     }
-    float delta_x = x_max - x_min;
-    float delta_y = y_max - y_min;
-    m_x_zoom = (float)m_width / delta_x;
-    float _y_zoom = (float)m_height / delta_y;
+    double delta_x = x_max - x_min;
+    double delta_y = y_max - y_min;
+    m_x_zoom = (double)m_width / delta_x;
+    double _y_zoom = (double)m_height / delta_y;
     if (same)
     {
         m_x_zoom = min(m_x_zoom, _y_zoom);
