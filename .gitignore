@@ -4,7 +4,6 @@ CMakeFiles/**
 .ninja_log
 *.ninja
 CMakeCache.txt
-plotter
 *.cmake
 *.xml
 *.cppcheck

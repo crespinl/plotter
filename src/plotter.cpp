@@ -24,6 +24,9 @@ SPDX itentifier : GPL-3.0-or-later
 #include <sstream>
 #include <thread>
 
+namespace plotter
+{
+
 using namespace std;
 using namespace SDL2pp;
 
@@ -486,4 +489,5 @@ void Plotter::initialize_zoom_and_offset(bool same)
 
     m_x_offset = -(x_max + x_min) / 2;
     m_y_offset = -(y_max + y_min) / 2;
+}
 }

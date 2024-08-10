@@ -18,5 +18,8 @@ SPDX itentifier : GPL-3.0-or-later
 */
 #pragma once
 
+namespace plotter
+{
 static unsigned int const firacode_ttf_len = 289624;
 extern unsigned char firacode_ttf[firacode_ttf_len];
+}

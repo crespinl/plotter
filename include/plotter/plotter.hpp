@@ -27,6 +27,9 @@ SPDX itentifier : GPL-3.0-or-later
 #include <unordered_map>
 #include <vector>
 
+namespace plotter
+{
+
 struct Coordinate
 {
     float x;
@@ -171,6 +174,7 @@ private:
     static constexpr int min_width = 160;
     static constexpr int min_height = 120;
 };
+}
 
 /*
 Warning :
