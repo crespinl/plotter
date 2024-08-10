@@ -13,3 +13,7 @@ Doxyfile
 test_program*
 build/**
 *.ttf
+lib/**
+install_manifest.txt
+testplotter
+tests/CMakeFiles/**

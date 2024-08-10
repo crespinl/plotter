@@ -1,2 +1,2 @@
 all:
-	cmake ./ -GNinja && ninja && ./plotter
+	cmake ./ -GNinja && ninja && sudo ninja install

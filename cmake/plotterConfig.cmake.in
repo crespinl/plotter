@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(SDL2 REQUIRED)
+find_dependency(SDL2pp REQUIRED)
+
+include("${CMAKE_CURRENT_LIST_DIR}/plotterTargets.cmake")
+
+check_required_components(plotter)
