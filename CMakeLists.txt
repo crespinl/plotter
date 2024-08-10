@@ -19,16 +19,16 @@ set(SRCS
     )
 
 set(HEADERS
-    include/libplotter/plotter.hpp
-    include/libplotter/firacode.hpp
-    include/libplotter/notosans.hpp
+    include/plotter/plotter.hpp
+    include/plotter/firacode.hpp
+    include/plotter/notosans.hpp
     )
 
 add_library(plotter SHARED ${SRCS} ${HEADERS})
 
 target_include_directories(plotter PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/libplotter>
+    $<INSTALL_INTERFACE:include/plotter>
     ${SDL2_INCLUDE_DIRS}
 )
 
@@ -45,8 +45,8 @@ install(TARGETS plotter
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(DIRECTORY include/libplotter/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libplotter
+install(DIRECTORY include/plotter/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/plotter
     FILES_MATCHING PATTERN "*.hpp"
 )
 

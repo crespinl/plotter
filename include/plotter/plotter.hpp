@@ -2,8 +2,8 @@
 #include <SDL2pp/SDL2pp.hh>
 #include <cstdint>
 #include <iostream>
-#include <libplotter/firacode.hpp>
-#include <libplotter/notosans.hpp>
+#include <plotter/firacode.hpp>
+#include <plotter/notosans.hpp>
 #include <memory>
 #include <string>
 #include <unordered_map>

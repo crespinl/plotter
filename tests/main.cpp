@@ -1,5 +1,5 @@
 #include <iostream>
-#include <libplotter/plotter.hpp>
+#include <plotter/plotter.hpp>
 
 using namespace SDL2pp;
 using namespace std;

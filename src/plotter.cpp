@@ -2,7 +2,7 @@
 #include <chrono>
 #include <cmath>
 #include <iomanip>
-#include <libplotter/plotter.hpp>
+#include <plotter/plotter.hpp>
 #include <sstream>
 #include <thread>
 
