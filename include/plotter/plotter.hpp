@@ -20,9 +20,10 @@ SPDX itentifier : GPL-3.0-or-later
 #include <SDL2pp/SDL2pp.hh>
 #include <cstdint>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <plotter/firacode.hpp>
 #include <plotter/notosans.hpp>
-#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -91,11 +92,13 @@ private:
 class Plotter
 {
 public:
-    Plotter(std::string const& title)
+    Plotter(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title)
         : m_width(800)
         , m_height(600)
         , m_running(false)
         , m_title(title)
+        , m_x_title(x_title)
+        , m_y_title(y_title)
         , m_big_font_ops(SDL2pp::RWops::FromConstMem(notosans_ttf, notosans_ttf_len))
         , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
         , m_big_font(m_big_font_ops, big_font_size)
@@ -105,7 +108,7 @@ public:
         , m_size_cursor(nullptr)
         , m_arrow_cursor(nullptr)
         , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
-        , m_hmargin(30 + 5 * m_small_font_advance)
+        , m_hmargin(30 + 5 * m_small_font_advance + y_axis_name_size())
     {
         if (!m_small_font.IsFixedWidth())
         {
@@ -126,6 +129,7 @@ private:
     bool y_is_in_plot(int y) const;
     void draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer);
     void draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer);
+    void draw_axis_titles(SDL2pp::Renderer& renderer);
     void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
     std::string to_str(double nb);
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
@@ -136,6 +140,8 @@ private:
     void draw_info_box(SDL2pp::Renderer& renderer);
     void initialize_zoom_and_offset(bool same);
     void draw_content(SDL2pp::Renderer& renderer);
+    int x_axis_name_size() const;
+    int y_axis_name_size() const;
 
     int m_width;
     int m_height;
@@ -146,6 +152,8 @@ private:
     double m_y_x_ratio; // This is the interesting data
     double m_y_zoom;    // This is a cached value
     std::string m_title;
+    std::optional<std::string> m_x_title;
+    std::optional<std::string> m_y_title;
     SDL2pp::SDLTTF m_ttf;
     SDL2pp::RWops m_big_font_ops;
     SDL2pp::RWops m_small_font_ops;

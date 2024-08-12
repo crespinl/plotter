@@ -23,7 +23,7 @@ using namespace std;
 
 int main()
 {
-    plotter::Plotter plotter { "Test Plot" };
+    plotter::Plotter plotter { "Test Plot", "x axis", "y axis" };
     vector<plotter::Coordinate> coordinates;
     for (int i = 0; i < 10'000; i++)
     {

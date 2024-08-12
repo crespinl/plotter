@@ -35,8 +35,8 @@ bool Plotter::plot(bool same)
     try
     {
         SDL sdl(SDL_INIT_VIDEO);
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * m_hmargin + m_width, top_margin + m_height + plot_info_margin + info_height() + bottom_margin, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-        window.SetMinimumSize(2 * m_hmargin + min_width, top_margin + min_height + plot_info_margin + info_height() + bottom_margin);
+        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * m_hmargin + m_width, top_margin + m_height + plot_info_margin + x_axis_name_size() + info_height() + bottom_margin, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        window.SetMinimumSize(2 * m_hmargin + min_width, top_margin + min_height + plot_info_margin + x_axis_name_size() + info_height() + bottom_margin);
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
@@ -45,6 +45,7 @@ bool Plotter::plot(bool same)
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
         initialize_zoom_and_offset(same);
         SDL_Event event;
+        SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" );
         while (m_running)
         {
             auto start = chrono::steady_clock::now();
@@ -115,7 +116,7 @@ bool Plotter::plot(bool same)
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
                     {
                         m_width = event.window.data1 - 2 * m_hmargin;
-                        m_height = event.window.data2 - top_margin - plot_info_margin - info_height() - bottom_margin;
+                        m_height = event.window.data2 - top_margin - plot_info_margin - x_axis_name_size() - info_height() - bottom_margin;
                         break;
                     }
                     default:
@@ -135,6 +136,7 @@ bool Plotter::plot(bool same)
 
             Texture title_sprite { renderer, m_big_font.RenderUTF8_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
             center_sprite(renderer, title_sprite, (m_width + 2 * m_hmargin) / 2, top_margin / 2);
+            draw_axis_titles(renderer);
 
             draw_axis(renderer);
 
@@ -174,6 +176,18 @@ void Plotter::draw_content(SDL2pp::Renderer& renderer)
     renderer.Copy(sprite, Rect { m_hmargin, top_margin, m_width, m_height }, { m_hmargin, top_margin });
 }
 
+int Plotter::x_axis_name_size() const
+{
+    if (m_x_title)
+        return 2 * text_margin + small_font_size;
+    return 0;
+}
+int Plotter::y_axis_name_size() const
+{
+    if (m_y_title)
+        return 2 * text_margin + small_font_size;
+    return 0;
+}
 void Plotter::draw_axis(Renderer& renderer)
 {
     auto draw_main_axis = [&]() {
@@ -287,6 +301,20 @@ void Plotter::draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& re
     center_sprite(renderer, sprite, m_hmargin - text_margin - sprite.GetWidth() / 2, y);
 }
 
+void Plotter::draw_axis_titles(SDL2pp::Renderer& renderer)
+{
+    if (m_y_title)
+    {
+        Texture sprite { renderer, m_small_font.RenderUTF8_Blended(*m_y_title, SDL_Color(0, 0, 0, 255)) };
+        renderer.Copy(sprite, NullOpt, { 30 + text_margin - sprite.GetWidth() / 2 - small_font_size / 2 , m_height / 2 + top_margin }, 270);
+    }
+    if (m_x_title)
+    {
+        Texture sprite { renderer, m_small_font.RenderUTF8_Blended(*m_x_title, SDL_Color(0, 0, 0, 255)) };
+        center_sprite(renderer, sprite, m_hmargin + m_width / 2, top_margin + m_height + small_font_size + text_margin + small_font_size / 2);
+    }
+}
+
 void Plotter::center_sprite(Renderer& renderer, Texture& texture, int x, int y)
 {
     renderer.Copy(texture, NullOpt, { x - texture.GetWidth() / 2, y - texture.GetHeight() / 2 });
@@ -358,7 +386,7 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
         texture = textures_pool.insert({ w, move(sprite) }).first;
     }
     Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
-    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                               // to degree
+    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                              // to degree
     renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
 }
 
@@ -382,9 +410,9 @@ void Plotter::update_mouse_position()
 void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
 {
     // renderer.SetDrawColor(0, 0, 0, 255);
-    // renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin + m_height + plot_info_margin, m_hmargin + m_width, top_margin + m_height + plot_info_margin + info_height())); // Draw the info box, for debug : TODO
+    // renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin + m_height + plot_info_margin + x_axis_name_size(), m_hmargin + m_width, top_margin + m_height + plot_info_margin + x_axis_name_size() + info_height())); // Draw the info box, for debug : TODO
 
-    int offset = top_margin + m_height + plot_info_margin + info_margin;
+    int offset = top_margin + m_height + plot_info_margin + x_axis_name_size() + info_margin;
     size_t i = 0;
     for (; i < m_collections.size(); i++)
     {
