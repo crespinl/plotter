@@ -37,57 +37,79 @@ struct Coordinate
     double y;
 };
 
+struct Color
+{
+    constexpr Color()
+        : red(255)
+        , green(255)
+        , blue(255)
+        , definite(false)
+    { }
+    constexpr Color(uint8_t r, uint8_t g, uint8_t b)
+        : red(r)
+        , green(g)
+        , blue(b)
+        , definite(true)
+    { }
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+    bool definite;
+};
+
+enum class DisplayPoints : bool
+{
+    Yes = true,
+    No = false
+};
+
+enum class DisplayLines : bool
+{
+    Yes = true,
+    No = false
+};
+
 struct Collection
 {
-    struct Color
-    {
-        constexpr Color()
-            : red(255)
-            , green(255)
-            , blue(255)
-            , definite(false)
-        { }
-        constexpr Color(uint8_t r, uint8_t g, uint8_t b)
-            : red(r)
-            , green(g)
-            , blue(b)
-            , definite(true)
-        { }
-        uint8_t red;
-        uint8_t green;
-        uint8_t blue;
-        bool definite;
-    };
     std::vector<Coordinate> points;
     std::string name;
     Color color;
-    bool draw_points { true };
-    bool draw_lines { false };
+    DisplayPoints display_points { DisplayPoints::Yes };
+    DisplayLines display_lines { DisplayLines::No };
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
+
+constexpr Color default_color = Color {};
 
 class ColorGenerator
 {
 public:
     ColorGenerator();
-    Collection::Color get_color();
+    Color get_color();
     static constexpr int nb_colors = 10;
-    static constexpr Collection::Color colors[nb_colors] {
-        Collection::Color { 0, 72, 186 },    // Absolute zero
-        Collection::Color { 219, 45, 67 },   // Alizarin
-        Collection::Color { 123, 182, 97 },  // Bud green
-        Collection::Color { 230, 103, 206 }, // Brilliant rose
-        Collection::Color { 150, 75, 0 },    // Brown
-        Collection::Color { 204, 85, 0 },    // Burnt orange
-        Collection::Color { 189, 51, 164 },  // Byzantine
-        Collection::Color { 75, 54, 33 },    // Café noir
-        Collection::Color { 255, 239, 0 },   // Canary yellow
-        Collection::Color { 209, 190, 168 }  // Dark vanilla
+    static constexpr Color colors[nb_colors] {
+        Color { 0, 72, 186 },    // Absolute zero
+        Color { 219, 45, 67 },   // Alizarin
+        Color { 123, 182, 97 },  // Bud green
+        Color { 230, 103, 206 }, // Brilliant rose
+        Color { 150, 75, 0 },    // Brown
+        Color { 204, 85, 0 },    // Burnt orange
+        Color { 189, 51, 164 },  // Byzantine
+        Color { 75, 54, 33 },    // Café noir
+        Color { 255, 239, 0 },   // Canary yellow
+        Color { 209, 190, 168 }  // Dark vanilla
     };
     // Source : https://en.wikipedia.org/wiki/List_of_colors_(compact)
 private:
     int m_index;
 };
+
+enum class Orthonormal : bool
+{
+    Yes = true,
+    No = false
+};
+
 
 class Plotter
 {
@@ -115,7 +137,7 @@ public:
             throw std::runtime_error("The small font has to be fixed width");
         }
     }
-    bool plot(bool same = false);
+    bool plot(Orthonormal orthonormal = Orthonormal::No);
     void add_collection(Collection const& c);
 
 private:
@@ -138,7 +160,7 @@ private:
     int info_height() const { return (2 + m_collections.size()) * info_margin + (1 + m_collections.size() / 2) * m_small_font.GetHeight(); }
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
-    void initialize_zoom_and_offset(bool same);
+    void initialize_zoom_and_offset(Orthonormal orthonormal);
     void draw_content(SDL2pp::Renderer& renderer);
     int x_axis_name_size() const;
     int y_axis_name_size() const;

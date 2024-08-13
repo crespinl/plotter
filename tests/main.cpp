@@ -20,20 +20,21 @@ SPDX itentifier : GPL-3.0-or-later
 #include <plotter/plotter.hpp>
 
 using namespace std;
+using namespace plotter;
 
 int main()
 {
-    plotter::Plotter plotter { "Test Plot", "x axis", "y axis" };
-    vector<plotter::Coordinate> coordinates;
+    Plotter plotter { "Test Plot", "x axis", "y axis" };
+    vector<Coordinate> coordinates;
     for (int i = 0; i < 10'000; i++)
     {
         float v = (float)i / 1000.;
         coordinates.push_back({ v, sin(v) });
     }
-    plotter.add_collection({ coordinates, "A sinus", {}, false, true });
-    plotter.add_collection({ vector<plotter::Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", {}, true, true });
-    plotter.add_collection({ vector<plotter::Coordinate> { { 0, 0 }, { -10, -8 } }, "A beautiful curve", {}, true, true });
-    plotter.add_collection({ vector<plotter::Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", {}, true, true });
-    plotter.add_collection({ vector<plotter::Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", {}, true, true });
+    plotter.add_collection({ coordinates, "A sinus", default_color, DisplayPoints::No, DisplayLines::Yes });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, -8 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", default_color, DisplayPoints::Yes, DisplayLines::Yes });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
     return !plotter.plot();
 }

@@ -30,7 +30,7 @@ namespace plotter
 using namespace std;
 using namespace SDL2pp;
 
-bool Plotter::plot(bool same)
+bool Plotter::plot(Orthonormal orthonormal)
 {
     try
     {
@@ -43,7 +43,7 @@ bool Plotter::plot(bool same)
         m_mouse_down = false;
         m_arrow_cursor = SDL_GetCursor();
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-        initialize_zoom_and_offset(same);
+        initialize_zoom_and_offset(orthonormal);
         SDL_Event event;
         SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" );
         while (m_running)
@@ -342,12 +342,12 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
             || (to_plot_y(c.points[i].y) < top_margin && to_plot_y(c.points[i + 1].y) < top_margin)
             || (to_plot_y(c.points[i].y) > top_margin + m_height && to_plot_y(c.points[i + 1].y) > top_margin + m_height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
-        if (c.draw_points)
+        if (c.display_points == DisplayPoints::Yes)
             draw_point(c.points[i].x, c.points[i].y, renderer);
-        if (c.draw_lines)
+        if (c.display_lines == DisplayLines::Yes)
             draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into, textures_pool);
     }
-    if (c.draw_points)
+    if (c.display_points == DisplayPoints::Yes)
         draw_point(c.points.back().x, c.points.back().y, renderer);
     renderer.SetTarget();
 }
@@ -446,9 +446,9 @@ ColorGenerator::ColorGenerator()
     : m_index(0)
 { }
 
-Collection::Color ColorGenerator::get_color()
+plotter::Color ColorGenerator::get_color()
 {
-    Collection::Color c = colors[m_index];
+    plotter::Color c = colors[m_index];
     m_index = (m_index + 1) % nb_colors;
     return c;
 }
@@ -462,7 +462,7 @@ void Plotter::add_collection(Collection const& c)
     }
 }
 
-void Plotter::initialize_zoom_and_offset(bool same)
+void Plotter::initialize_zoom_and_offset(Orthonormal orthonormal)
 {
     if (m_collections.size() == 0)
     {
@@ -504,7 +504,7 @@ void Plotter::initialize_zoom_and_offset(bool same)
     double delta_y = y_max - y_min;
     m_x_zoom = (double)m_width / delta_x;
     double _y_zoom = (double)m_height / delta_y;
-    if (same)
+    if (orthonormal == Orthonormal::Yes)
     {
         m_x_zoom = min(m_x_zoom, _y_zoom);
         m_y_x_ratio = 1;
