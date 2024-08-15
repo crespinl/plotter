@@ -23,6 +23,7 @@ SPDX itentifier : GPL-3.0-or-later
 #include <plotter/plotter.hpp>
 #include <sstream>
 #include <thread>
+#include <limits>
 
 namespace plotter
 {
@@ -86,8 +87,15 @@ bool Plotter::plot(Orthonormal orthonormal)
                 }
                 else if (event.type == SDL_MOUSEWHEEL)
                 {
-                    m_x_zoom = min(max(m_x_zoom * pow(zoom_factor, event.wheel.preciseY), 2e-37), 2e8);
+                    double back_x_zoom = m_x_zoom;
+                    m_x_zoom *= pow(zoom_factor, event.wheel.preciseY);
                     m_y_zoom = m_x_zoom * m_y_x_ratio;
+                    if (from_plot_x(m_hmargin) == from_plot_x(m_hmargin + 2 * line_width_half) || from_plot_y(top_margin) == from_plot_y(top_margin + 2 * line_width_half))
+                    {
+                        // We were too far and can't distinguish two points close to each other anymore
+                        m_x_zoom = back_x_zoom;
+                        m_y_zoom = m_x_zoom * m_y_x_ratio;
+                    }
                     update_mouse_position();
                 }
                 else if (event.type == SDL_MOUSEMOTION)
@@ -278,11 +286,11 @@ void Plotter::draw_point(double x, double y, Renderer& renderer)
 
 int Plotter::to_plot_x(double x) const
 {
-    return m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin;
+    return cast_to_int_check_limits(m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin);
 }
 int Plotter::to_plot_y(double y) const
 {
-    return m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin;
+    return cast_to_int_check_limits(m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin);
 }
 double Plotter::from_plot_x(int x) const
 {
@@ -299,6 +307,11 @@ bool Plotter::x_is_in_plot(int x) const
 bool Plotter::y_is_in_plot(int y) const
 {
     return y > top_margin && y < top_margin + m_height;
+}
+
+int Plotter::cast_to_int_check_limits(double x)
+{
+    return max(min(x, static_cast<double>(numeric_limits<int>::max()) - 1.), static_cast<double>(numeric_limits<int>::min()) + 1.);
 }
 
 void Plotter::draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer)
@@ -375,7 +388,7 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
     int x2 = p2.GetX();
     int y1 = p1.GetY();
     int y2 = p2.GetY();
-    Rect { m_hmargin, top_margin, m_width, m_height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the
+    Rect { m_hmargin, top_margin, m_width, m_height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the line
     double const max_w = sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height);
     double w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;

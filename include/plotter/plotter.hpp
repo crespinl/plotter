@@ -165,6 +165,7 @@ private:
     int x_axis_name_size() const;
     int y_axis_name_size() const;
     double static compute_grid_step(int min_nb, int max_nb, double range);
+    int static cast_to_int_check_limits(double x);
 
     int m_width;
     int m_height;
