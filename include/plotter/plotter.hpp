@@ -164,6 +164,7 @@ private:
     void draw_content(SDL2pp::Renderer& renderer);
     int x_axis_name_size() const;
     int y_axis_name_size() const;
+    double static compute_grid_step(int min_nb, int max_nb, double range);
 
     int m_width;
     int m_height;
@@ -203,6 +204,8 @@ private:
     static constexpr int text_margin = 5;
     static constexpr int min_width = 160;
     static constexpr int min_height = 120;
+    static constexpr double min_spacing_between_axis = 80; // In px
+    static constexpr double max_spacing_between_axis = 200; // In px
 };
 }
 

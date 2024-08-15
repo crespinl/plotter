@@ -45,7 +45,7 @@ bool Plotter::plot(Orthonormal orthonormal)
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
         initialize_zoom_and_offset(orthonormal);
         SDL_Event event;
-        SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" );
+        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
         while (m_running)
         {
             auto start = chrono::steady_clock::now();
@@ -206,8 +206,6 @@ void Plotter::draw_axis(Renderer& renderer)
     };
 
     // Draw secondary axis :
-    int nb_vertical_axis = m_width / 130;
-    int nb_horizontal_axis = m_height / 130;
 
     double x_max = from_plot_x(m_width);
     double x_min = from_plot_x(0);
@@ -217,25 +215,19 @@ void Plotter::draw_axis(Renderer& renderer)
     double delta_x = x_max - x_min;
     double delta_y = y_max - y_min;
 
-    double x_step = pow(10., round(log10(delta_x) - 1));
-    double y_step = pow(10., round(log10(delta_y) - 1));
+    int max_nb_vertical_axis = m_width / min_spacing_between_axis;
+    int min_nb_vertical_axis = m_width / max_spacing_between_axis;
+    int max_nb_horizontal_axis = m_height / min_spacing_between_axis;
+    int min_nb_horizontal_axis = m_height / max_spacing_between_axis;
 
-    if (x_step == 0 || y_step == 0 || nb_vertical_axis == 0 || nb_horizontal_axis == 0)
-    { // Not enough space to draw secondary axis
-        draw_main_axis();
-        return;
-    }
-    int nb_vertical = delta_x / x_step + 1;
-    int nb_horizontal = delta_y / y_step + 1;
-
-    x_step *= nb_vertical / nb_vertical_axis + 1;
-    y_step *= nb_horizontal / nb_horizontal_axis + 1;
+    double x_step = compute_grid_step(min_nb_vertical_axis, max_nb_vertical_axis, delta_x);
+    double y_step = compute_grid_step(min_nb_horizontal_axis, max_nb_horizontal_axis, delta_y);
 
     double rounded_x_min = round(x_min / x_step) * x_step;
     double rounded_y_min = round(y_min / y_step) * y_step;
 
     renderer.SetDrawColor(180, 180, 180, 255);
-    for (int i = 0; i < nb_horizontal_axis; i++)
+    for (int i = 0; i < max_nb_horizontal_axis + 1; i++)
     {
         int ordinate = to_plot_y(rounded_y_min + i * y_step);
         if (y_is_in_plot(ordinate))
@@ -244,7 +236,7 @@ void Plotter::draw_axis(Renderer& renderer)
             renderer.FillRect(Rect::FromCorners(m_hmargin, ordinate - line_width_half, m_hmargin + m_width, ordinate + line_width_half));
         }
     }
-    for (int i = 0; i < nb_vertical_axis; i++)
+    for (int i = 0; i < max_nb_vertical_axis + 1; i++)
     {
         int abscissa = to_plot_x(rounded_x_min + i * x_step);
         if (x_is_in_plot(abscissa))
@@ -253,7 +245,27 @@ void Plotter::draw_axis(Renderer& renderer)
             renderer.FillRect(Rect::FromCorners(abscissa - line_width_half, top_margin, abscissa + line_width_half, top_margin + m_height));
         }
     }
+
     draw_main_axis();
+}
+
+double Plotter::compute_grid_step(int min_nb, int max_nb, double range)
+{
+    int factor = 0;
+    int exponent = 0;
+    int candidate_factor[3] = { 1, 2, 5 };
+    for (int i = 0; i < 3; i++)
+    {
+        int current_factor = candidate_factor[i];
+        int exponent_1 = floor(log10(range / (double)(current_factor * max_nb)));
+        int exponent_2 = floor(log10(range / (double)(current_factor * min_nb)));
+        if (exponent_1 != exponent_2)
+        {
+            exponent = exponent_2;
+            factor = current_factor;
+        }
+    }
+    return factor * pow(10., exponent);
 }
 
 void Plotter::draw_point(double x, double y, Renderer& renderer)
@@ -306,7 +318,7 @@ void Plotter::draw_axis_titles(SDL2pp::Renderer& renderer)
     if (m_y_title)
     {
         Texture sprite { renderer, m_small_font.RenderUTF8_Blended(*m_y_title, SDL_Color(0, 0, 0, 255)) };
-        renderer.Copy(sprite, NullOpt, { 30 + text_margin - sprite.GetWidth() / 2 - small_font_size / 2 , m_height / 2 + top_margin }, 270);
+        renderer.Copy(sprite, NullOpt, { 30 + text_margin - sprite.GetWidth() / 2 - small_font_size / 2, m_height / 2 + top_margin }, 270);
     }
     if (m_x_title)
     {
