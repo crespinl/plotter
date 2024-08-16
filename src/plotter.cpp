@@ -20,10 +20,10 @@ SPDX itentifier : GPL-3.0-or-later
 #include <chrono>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <plotter/plotter.hpp>
 #include <sstream>
 #include <thread>
-#include <limits>
 
 namespace plotter
 {
@@ -44,7 +44,8 @@ bool Plotter::plot(Orthonormal orthonormal)
         m_mouse_down = false;
         m_arrow_cursor = SDL_GetCursor();
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-        initialize_zoom_and_offset(orthonormal);
+        if (! m_window_defined)
+            initialize_zoom_and_offset(orthonormal);
         SDL_Event event;
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
         while (m_running)
@@ -487,6 +488,15 @@ void Plotter::add_collection(Collection const& c)
     }
 }
 
+void Plotter::set_window(double x, double y, double w, double h)
+{
+    m_window_defined = true;
+    m_x_zoom = (double)m_width / w;
+    m_y_zoom = (double)m_height / h;
+    m_y_x_ratio = m_y_zoom / m_x_zoom;
+    m_x_offset = -(x + w / 2);
+    m_y_offset = -(y - h / 2);
+}
 void Plotter::initialize_zoom_and_offset(Orthonormal orthonormal)
 {
     if (m_collections.size() == 0)

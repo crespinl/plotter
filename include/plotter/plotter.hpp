@@ -131,6 +131,7 @@ public:
         , m_arrow_cursor(nullptr)
         , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
         , m_hmargin(30 + 5 * m_small_font_advance + y_axis_name_size())
+        , m_window_defined(false)
     {
         if (!m_small_font.IsFixedWidth())
         {
@@ -139,6 +140,7 @@ public:
     }
     bool plot(Orthonormal orthonormal = Orthonormal::No);
     void add_collection(Collection const& c);
+    void set_window(double x, double y, double w, double h); // (x, y) are the coordinates of the top-left point
 
 private:
     void draw_axis(SDL2pp::Renderer& renderer);
@@ -192,6 +194,7 @@ private:
     ColorGenerator m_color_generator;
     int m_small_font_advance;
     int m_hmargin;
+    bool m_window_defined;
 
     static constexpr int top_margin = 50;
     static constexpr int plot_info_margin = 25;

@@ -31,6 +31,7 @@ int main()
         float v = (float)i / 1000.;
         coordinates.push_back({ v, sin(v) });
     }
+    plotter.set_window(-10, 10, 20, 20);
     plotter.add_collection({ coordinates, "A sinus", default_color, DisplayPoints::No, DisplayLines::Yes });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, -8 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
