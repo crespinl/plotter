@@ -44,7 +44,7 @@ bool Plotter::plot(Orthonormal orthonormal)
         m_mouse_down = false;
         m_arrow_cursor = SDL_GetCursor();
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-        if (! m_window_defined)
+        if (!m_window_defined)
             initialize_zoom_and_offset(orthonormal);
         SDL_Event event;
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -181,6 +181,10 @@ void Plotter::draw_content(SDL2pp::Renderer& renderer)
     for (auto const& e : m_collections)
     {
         plot_collection(e, renderer, sprite);
+    }
+    for (auto const& e : m_functions)
+    {
+        plot_function(e, renderer, sprite);
     }
     renderer.Copy(sprite, Rect { m_hmargin, top_margin, m_width, m_height }, { m_hmargin, top_margin });
 }
@@ -378,6 +382,20 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     renderer.SetTarget();
 }
 
+void Plotter::plot_function(Function const& f, SDL2pp::Renderer& renderer, Texture& into)
+{
+    double x_min = from_plot_x(m_hmargin);
+    double x_max = from_plot_x(m_hmargin + m_width);
+    vector<Coordinate> coordinates;
+    coordinates.reserve(sampling_number_of_points);
+    for (int i = 0; i < sampling_number_of_points; i++)
+    {
+        double v = x_min + i * (x_max - x_min) / sampling_number_of_points;
+        coordinates.push_back({ v, f.function(v) });
+    }
+    plot_collection(Collection { coordinates, f.name, f.color, DisplayPoints::No, DisplayLines::Yes }, renderer, into);
+}
+
 SDL2pp::Point Plotter::to_point(Coordinate const& c) const
 {
     return { to_plot_x(c.x), to_plot_y(c.y) };
@@ -439,13 +457,25 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     // renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin + m_height + plot_info_margin + x_axis_name_size(), m_hmargin + m_width, top_margin + m_height + plot_info_margin + x_axis_name_size() + info_height())); // Draw the info box, for debug : TODO
 
     int offset = top_margin + m_height + plot_info_margin + x_axis_name_size() + info_margin;
+
+    vector<pair<SDL_Color, string>> infos;
+    infos.reserve(m_collections.size() + m_functions.size());
+    for (auto const& e : m_collections)
+    {
+        infos.push_back({e.get_color(), e.name});
+    }
+    for (auto const& e : m_functions)
+    {
+        infos.push_back({e.get_color(), e.name});
+    }
+
     size_t i = 0;
-    for (; i < m_collections.size(); i++)
+    for (; i < infos.size(); i++)
     {
         int hpos = (i % 2 == 0) ? 0 : m_width / 2;
-        renderer.SetDrawColor(m_collections[i].get_color());
+        renderer.SetDrawColor(infos[i].first);
         renderer.FillRect(Rect { m_hmargin + hpos, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
-        string text = m_collections[i].name;
+        string text = infos[i].second;
         if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)m_width / 2) // make sure it will not take too much space
         {
             int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - m_width / 2) / m_small_font_advance;
@@ -488,6 +518,14 @@ void Plotter::add_collection(Collection const& c)
     }
 }
 
+void Plotter::add_function(Function const& f)
+{
+    m_functions.push_back(f);
+    if (!m_functions.back().color.definite)
+    {
+        m_functions.back().color = m_color_generator.get_color();
+    }
+}
 void Plotter::set_window(double x, double y, double w, double h)
 {
     m_window_defined = true;

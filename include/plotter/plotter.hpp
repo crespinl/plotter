@@ -19,6 +19,7 @@ SPDX itentifier : GPL-3.0-or-later
 #include <SDL2/SDL.h>
 #include <SDL2pp/SDL2pp.hh>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -79,6 +80,14 @@ struct Collection
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
 
+struct Function
+{
+    std::function<double(double)> function;
+    std::string name;
+    Color color;
+    SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
+};
+
 constexpr Color default_color = Color {};
 
 class ColorGenerator
@@ -110,7 +119,6 @@ enum class Orthonormal : bool
     No = false
 };
 
-
 class Plotter
 {
 public:
@@ -140,6 +148,7 @@ public:
     }
     bool plot(Orthonormal orthonormal = Orthonormal::No);
     void add_collection(Collection const& c);
+    void add_function(Function const& f);
     void set_window(double x, double y, double w, double h); // (x, y) are the coordinates of the top-left point
 
 private:
@@ -157,9 +166,10 @@ private:
     void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
     std::string to_str(double nb);
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
+    void plot_function(Function const& f, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     SDL2pp::Point to_point(Coordinate const& c) const;
     void draw_line(SDL2pp::Point const& p1, SDL2pp::Point const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, std::unordered_map<int, SDL2pp::Texture>& textures_pool);
-    int info_height() const { return (2 + m_collections.size()) * info_margin + (1 + m_collections.size() / 2) * m_small_font.GetHeight(); }
+    int info_height() const { return (2 + m_collections.size() + m_functions.size()) * info_margin + (1 + (m_collections.size() + m_functions.size()) / 2) * m_small_font.GetHeight(); }
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
     void initialize_zoom_and_offset(Orthonormal orthonormal);
@@ -186,6 +196,7 @@ private:
     SDL2pp::Font m_big_font;
     SDL2pp::Font m_small_font;
     std::vector<Collection> m_collections;
+    std::vector<Function> m_functions;
     double m_mouse_x;
     double m_mouse_y;
     bool m_mouse_down;
@@ -208,8 +219,9 @@ private:
     static constexpr int text_margin = 5;
     static constexpr int min_width = 160;
     static constexpr int min_height = 120;
-    static constexpr double min_spacing_between_axis = 80; // In px
+    static constexpr double min_spacing_between_axis = 80;  // In px
     static constexpr double max_spacing_between_axis = 200; // In px
+    static constexpr int sampling_number_of_points = 5'000;
 };
 }
 
