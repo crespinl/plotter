@@ -16,3 +16,4 @@ lib/**
 install_manifest.txt
 testplotter
 tests/CMakeFiles/**
+*.png

@@ -44,7 +44,8 @@ int main()
         return y;
     };
 
-    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color }); */
-
-    return !plotter.plot();
+    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color });*/
+    plotter.plot();
+    plotter.save("test");
+    return 0;
 }

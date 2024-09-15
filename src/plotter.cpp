@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 SPDX itentifier : GPL-3.0-or-later
 */
+#include <SDL2/SDL_image.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -33,10 +34,21 @@ using namespace SDL2pp;
 
 bool Plotter::plot(Orthonormal orthonormal)
 {
+    return internal_plot(orthonormal, false, "");
+}
+
+bool Plotter::save(string const& name, Orthonormal orthonormal)
+{
+    return internal_plot(orthonormal, true, name);
+}
+
+bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string const& name)
+{
     try
     {
         SDL sdl(SDL_INIT_VIDEO);
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * m_hmargin + m_width, top_margin + m_height + plot_info_margin + x_axis_name_size() + info_height() + bottom_margin, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        SDLImage sdl_image(IMG_INIT_PNG);
+        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 2 * m_hmargin + m_width, top_margin + m_height + plot_info_margin + x_axis_name_size() + info_height() + bottom_margin, (save ? SDL_WINDOW_HIDDEN : SDL_WINDOW_SHOWN) | SDL_WINDOW_RESIZABLE);
         window.SetMinimumSize(2 * m_hmargin + min_width, top_margin + min_height + plot_info_margin + x_axis_name_size() + info_height() + bottom_margin);
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
@@ -152,6 +164,12 @@ bool Plotter::plot(Orthonormal orthonormal)
             draw_content(renderer);
 
             renderer.Present();
+
+            if (save)
+            {
+                save_img(window, renderer, name);
+                m_running = false;
+            }
 
             // Frame limiter
             auto end = chrono::steady_clock::now();
@@ -462,11 +480,11 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     infos.reserve(m_collections.size() + m_functions.size());
     for (auto const& e : m_collections)
     {
-        infos.push_back({e.get_color(), e.name});
+        infos.push_back({ e.get_color(), e.name });
     }
     for (auto const& e : m_functions)
     {
-        infos.push_back({e.get_color(), e.name});
+        infos.push_back({ e.get_color(), e.name });
     }
 
     size_t i = 0;
@@ -591,4 +609,16 @@ void Plotter::initialize_zoom_and_offset(Orthonormal orthonormal)
     m_x_offset = -(x_max + x_min) / 2;
     m_y_offset = -(y_max + y_min) / 2;
 }
+
+void Plotter::save_img(Window const& window, Renderer& renderer, string name)
+{
+    Surface s { SDL_PIXELFORMAT_RGBA32, window.GetWidth(), window.GetHeight(), 32, R_MASK, G_MASK, B_MASK, A_MASK };
+    {
+        auto l = s.Lock();
+        renderer.ReadPixels(NullOpt, SDL_PIXELFORMAT_RGBA32, l.GetPixels(), l.GetPitch());
+    }
+    name += ".png";
+    IMG_SavePNG(s.Get(), name.c_str());
+}
+
 }

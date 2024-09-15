@@ -119,6 +119,18 @@ enum class Orthonormal : bool
     No = false
 };
 
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+constexpr uint32_t R_MASK = 0xff000000;
+constexpr uint32_t G_MASK = 0x00ff0000;
+constexpr uint32_t B_MASK = 0x0000ff00;
+constexpr uint32_t A_MASK = 0x000000ff;
+#else
+constexpr uint32_t R_MASK = 0x000000ff;
+constexpr uint32_t G_MASK = 0x0000ff00;
+constexpr uint32_t B_MASK = 0x00ff0000;
+constexpr uint32_t A_MASK = 0xff000000;
+#endif
+
 class Plotter
 {
 public:
@@ -147,11 +159,13 @@ public:
         }
     }
     bool plot(Orthonormal orthonormal = Orthonormal::No);
+    bool save(std::string const& name, Orthonormal orthonormal = Orthonormal::No);
     void add_collection(Collection const& c);
     void add_function(Function const& f);
     void set_window(double x, double y, double w, double h); // (x, y) are the coordinates of the top-left point
 
 private:
+    bool internal_plot(Orthonormal orthonormal, bool save, std::string const& name);
     void draw_axis(SDL2pp::Renderer& renderer);
     void draw_point(double x, double y, SDL2pp::Renderer& renderer); // Absolute coordinates
     int to_plot_x(double x) const;
@@ -178,6 +192,7 @@ private:
     int y_axis_name_size() const;
     double static compute_grid_step(int min_nb, int max_nb, double range);
     int static cast_to_int_check_limits(double x);
+    void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
 
     int m_width;
     int m_height;
