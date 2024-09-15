@@ -284,7 +284,7 @@ double Plotter::compute_grid_step(int min_nb, int max_nb, double range)
 {
     int factor = 0;
     int exponent = 0;
-    int candidate_factor[3] = { 1, 2, 5 };
+    int constexpr candidate_factor[3] = { 1, 2, 5 };
     for (int i = 0; i < 3; i++)
     {
         int current_factor = candidate_factor[i];
@@ -497,7 +497,8 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
         if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)m_width / 2) // make sure it will not take too much space
         {
             int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - m_width / 2) / m_small_font_advance;
-            text = text.substr(0, text.size() - extra_chars - 4);
+            // text = text.substr(0, text.size() - extra_chars - 4);
+            text.resize(text.size() - extra_chars - 4);
             text += "...";
         }
         Texture name = { renderer, m_small_font.RenderUTF8_Blended(text, SDL_Color(0, 0, 0, 255)) };
