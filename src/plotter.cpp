@@ -100,6 +100,7 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                 }
                 else if (event.type == SDL_MOUSEWHEEL)
                 {
+                    update_mouse_position();
                     double back_x_zoom = m_x_zoom;
                     m_x_zoom *= pow(zoom_factor, event.wheel.preciseY);
                     m_y_zoom = m_x_zoom * m_y_x_ratio;
@@ -109,7 +110,18 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                         m_x_zoom = back_x_zoom;
                         m_y_zoom = m_x_zoom * m_y_x_ratio;
                     }
-                    update_mouse_position();
+                    else
+                    {
+                        double previous_x = m_mouse_x;
+                        double previous_y = m_mouse_y;
+                        update_mouse_position();
+                        if (!isnan(previous_x) && !isnan(previous_y) && !isnan(m_mouse_x) && !isnan(m_mouse_y))
+                        {
+                            m_x_offset += m_mouse_x - previous_x;
+                            m_y_offset += m_mouse_y - previous_y;
+                            update_mouse_position();
+                        }
+                    }
                 }
                 else if (event.type == SDL_MOUSEMOTION)
                 {
@@ -497,7 +509,6 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
         if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)m_width / 2) // make sure it will not take too much space
         {
             int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - m_width / 2) / m_small_font_advance;
-            // text = text.substr(0, text.size() - extra_chars - 4);
             text.resize(text.size() - extra_chars - 4);
             text += "...";
         }
