@@ -236,15 +236,15 @@ void Plotter::draw_axis(Renderer& renderer)
     auto draw_main_axis = [&]() {
         Texture zero_sprite { renderer, m_small_font.RenderUTF8_Blended("0", SDL_Color(0, 0, 0, 255)) };
         renderer.SetDrawColor(120, 120, 120, 255);
-        if (y_is_in_plot(to_plot_y(0))) // abscissa
+        if (y_is_in_plot(to_plot_y<int>(0))) // abscissa
         {
-            draw_horizontal_line_number(0., to_plot_y(0.), renderer);
-            renderer.FillRect(Rect::FromCorners(m_hmargin, to_plot_y(0) - line_width_half, m_hmargin + m_width, to_plot_y(0) + line_width_half));
+            draw_horizontal_line_number(0., to_plot_y<int>(0.), renderer);
+            renderer.FillRect(Rect::FromCorners(m_hmargin, to_plot_y<int>(0) - line_width_half, m_hmargin + m_width, to_plot_y<int>(0) + line_width_half));
         }
-        if (x_is_in_plot(to_plot_x(0))) // ordinate
+        if (x_is_in_plot(to_plot_x<int>(0))) // ordinate
         {
-            draw_vertical_line_number(0., to_plot_x(0.), renderer);
-            renderer.FillRect(Rect::FromCorners(to_plot_x(0) - line_width_half, top_margin, to_plot_x(0) + line_width_half, top_margin + m_height));
+            draw_vertical_line_number(0., to_plot_x<int>(0.), renderer);
+            renderer.FillRect(Rect::FromCorners(to_plot_x<int>(0) - line_width_half, top_margin, to_plot_x<int>(0) + line_width_half, top_margin + m_height));
         }
     };
 
@@ -272,7 +272,7 @@ void Plotter::draw_axis(Renderer& renderer)
     renderer.SetDrawColor(180, 180, 180, 255);
     for (int i = 0; i < max_nb_horizontal_axis + 1; i++)
     {
-        int ordinate = to_plot_y(rounded_y_min + i * y_step);
+        int ordinate = to_plot_y<int>(rounded_y_min + i * y_step);
         if (y_is_in_plot(ordinate))
         {
             draw_horizontal_line_number(rounded_y_min + i * y_step, ordinate, renderer);
@@ -281,7 +281,7 @@ void Plotter::draw_axis(Renderer& renderer)
     }
     for (int i = 0; i < max_nb_vertical_axis + 1; i++)
     {
-        int abscissa = to_plot_x(rounded_x_min + i * x_step);
+        int abscissa = to_plot_x<int>(rounded_x_min + i * x_step);
         if (x_is_in_plot(abscissa))
         {
             draw_vertical_line_number(rounded_x_min + i * x_step, abscissa, renderer);
@@ -313,20 +313,12 @@ double Plotter::compute_grid_step(int min_nb, int max_nb, double range)
 
 void Plotter::draw_point(double x, double y, Renderer& renderer)
 {
-    int abscissa = to_plot_x(x);
-    int ordinate = to_plot_y(y);
+    int abscissa = to_plot_x<int>(x);
+    int ordinate = to_plot_y<int>(y);
     if (x_is_in_plot(abscissa) && y_is_in_plot(ordinate))
         renderer.FillRect(Rect::FromCorners(abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size));
 }
 
-int Plotter::to_plot_x(double x) const
-{
-    return cast_to_int_check_limits(m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin);
-}
-int Plotter::to_plot_y(double y) const
-{
-    return cast_to_int_check_limits(m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin);
-}
 double Plotter::from_plot_x(int x) const
 {
     return ((double)x - m_hmargin - (double)m_width / 2.) / m_x_zoom - m_x_offset;
@@ -342,11 +334,6 @@ bool Plotter::x_is_in_plot(int x) const
 bool Plotter::y_is_in_plot(int y) const
 {
     return y > top_margin && y < top_margin + m_height;
-}
-
-int Plotter::cast_to_int_check_limits(double x)
-{
-    return max(min(x, static_cast<double>(numeric_limits<int>::max()) - 1.), static_cast<double>(numeric_limits<int>::min()) + 1.);
 }
 
 void Plotter::draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer)
@@ -397,10 +384,10 @@ void Plotter::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     renderer.SetTarget(into);
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
-        if ((to_plot_x(c.points[i].x) < m_hmargin && to_plot_x(c.points[i + 1].x) < m_hmargin)
-            || (to_plot_x(c.points[i].x) > m_hmargin + m_width && to_plot_x(c.points[i + 1].x) > m_hmargin + m_width)
-            || (to_plot_y(c.points[i].y) < top_margin && to_plot_y(c.points[i + 1].y) < top_margin)
-            || (to_plot_y(c.points[i].y) > top_margin + m_height && to_plot_y(c.points[i + 1].y) > top_margin + m_height))
+        if ((to_plot_x<int>(c.points[i].x) < m_hmargin && to_plot_x<int>(c.points[i + 1].x) < m_hmargin)
+            || (to_plot_x<int>(c.points[i].x) > m_hmargin + m_width && to_plot_x<int>(c.points[i + 1].x) > m_hmargin + m_width)
+            || (to_plot_y<int>(c.points[i].y) < top_margin && to_plot_y<int>(c.points[i + 1].y) < top_margin)
+            || (to_plot_y<int>(c.points[i].y) > top_margin + m_height && to_plot_y<int>(c.points[i + 1].y) > top_margin + m_height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
         if (c.display_points == DisplayPoints::Yes)
             draw_point(c.points[i].x, c.points[i].y, renderer);
@@ -426,18 +413,89 @@ void Plotter::plot_function(Function const& f, SDL2pp::Renderer& renderer, Textu
     plot_collection(Collection { coordinates, f.name, f.color, DisplayPoints::No, DisplayLines::Yes }, renderer, into);
 }
 
-SDL2pp::Point Plotter::to_point(Coordinate const& c) const
+Plotter::ScreenPoint Plotter::to_point(Coordinate const& c) const
 {
-    return { to_plot_x(c.x), to_plot_y(c.y) };
+    return { to_plot_x<int64_t>(c.x), to_plot_y<int64_t>(c.y) };
 }
 
-void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Texture& into, unordered_map<int, Texture>& textures_pool)
+bool Plotter::intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2)
 {
-    int x1 = p1.GetX();
-    int x2 = p2.GetX();
-    int y1 = p1.GetY();
-    int y2 = p2.GetY();
-    Rect { m_hmargin, top_margin, m_width, m_height }.IntersectLine(x1, y1, x2, y2); // clips only the needed part of the line
+    // This function exists in SDL, but not with int64_t
+    auto clip = [](int64_t p, int64_t q, int64_t& t0_num, int64_t& t0_den, int64_t& t1_num, int64_t& t1_den) { // Liang-Barsky algorithm
+        if (p == 0)
+        {
+            return q >= 0;
+        }
+        int64_t t_num = q;
+        int64_t t_den = p;
+
+        if (t_den < 0)
+        {
+            t_num = -t_num;
+            t_den = -t_den;
+        }
+
+        if (p < 0)
+        {
+            if (t_num * t1_den > t_den * t1_num)
+                return false; // t > t1
+            if (t_num * t0_den > t_den * t0_num)
+            { // t > t0
+                t0_num = t_num;
+                t0_den = t_den;
+            }
+        }
+        else
+        {
+            if (t_num * t0_den < t_den * t0_num)
+                return false; // t < t0
+            if (t_num * t1_den < t_den * t1_num)
+            { // t < t1
+                t1_num = t_num;
+                t1_den = t_den;
+            }
+        }
+        return true;
+    };
+    int64_t t0_num = 0;
+    int64_t t0_den = 1;
+    int64_t t1_num = 1;
+    int64_t t1_den = 1;
+    int64_t dx = x2 - x1;
+    int64_t dy = y2 - y1;
+
+    // Rectangle borders
+    if (!clip(-dx, x1 - rx, t0_num, t0_den, t1_num, t1_den))
+        return false; // left
+    if (!clip(dx, rx + rw - x1, t0_num, t0_den, t1_num, t1_den))
+        return false; // right
+    if (!clip(-dy, y1 - ry, t0_num, t0_den, t1_num, t1_den))
+        return false; // bottom
+    if (!clip(dy, ry + rh - y1, t0_num, t0_den, t1_num, t1_den))
+        return false; // top
+
+    if (t1_num < t1_den)
+    {
+        x2 = x1 + dx * t1_num / t1_den;
+        y2 = y1 + dy * t1_num / t1_den;
+    }
+
+    if (t0_num > 0)
+    {
+        x1 = x1 + dx * t0_num / t0_den;
+        y1 = y1 + dy * t0_num / t0_den;
+    }
+
+    return true;
+}
+
+void Plotter::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& renderer, Texture& into, unordered_map<int, Texture>& textures_pool)
+{
+    int64_t x1 = p1.x;
+    int64_t x2 = p2.x;
+    int64_t y1 = p1.y;
+    int64_t y2 = p2.y;
+    intersect_rect_and_line(m_hmargin, top_margin, m_width, m_height, x1, x2, y1, y2);
     double const max_w = sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height);
     double w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;
@@ -459,8 +517,8 @@ void Plotter::draw_line(Point const& p1, Point const& p2, Renderer& renderer, Te
         renderer.SetTarget(into);
         texture = textures_pool.insert({ w, move(sprite) }).first;
     }
-    Point dst_point { x1 + static_cast<int>(2. * line_width_half * sin(angle)), y1 + static_cast<int>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
-    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                              // to degree
+    Point dst_point { x1 + static_cast<int64_t>(2. * line_width_half * sin(angle)), y1 + static_cast<int64_t>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
+    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                                      // to degree
     renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
 }
 

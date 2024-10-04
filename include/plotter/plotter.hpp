@@ -165,11 +165,22 @@ public:
     void set_window(double x, double y, double w, double h); // (x, y) are the coordinates of the top-left point
 
 private:
+    struct ScreenPoint
+    {
+        int64_t x;
+        int64_t y;
+    };
     bool internal_plot(Orthonormal orthonormal, bool save, std::string const& name);
     void draw_axis(SDL2pp::Renderer& renderer);
     void draw_point(double x, double y, SDL2pp::Renderer& renderer); // Absolute coordinates
-    int to_plot_x(double x) const;
-    int to_plot_y(double y) const;
+    template <typename T> T to_plot_x(double x) const
+    {
+        return static_cast<T>(m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin);
+    }
+    template <typename T> T to_plot_y(double y) const
+    {
+        return static_cast<T>(m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin);
+    }
     double from_plot_x(int x) const;
     double from_plot_y(int x) const;
     bool x_is_in_plot(int x) const;
@@ -181,8 +192,8 @@ private:
     std::string to_str(double nb);
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     void plot_function(Function const& f, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
-    SDL2pp::Point to_point(Coordinate const& c) const;
-    void draw_line(SDL2pp::Point const& p1, SDL2pp::Point const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, std::unordered_map<int, SDL2pp::Texture>& textures_pool);
+    ScreenPoint to_point(Coordinate const& c) const;
+    void draw_line(ScreenPoint const& p1, ScreenPoint const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, std::unordered_map<int, SDL2pp::Texture>& textures_pool);
     int info_height() const { return (2 + m_collections.size() + m_functions.size()) * info_margin + (1 + (m_collections.size() + m_functions.size()) / 2) * m_small_font.GetHeight(); }
     void update_mouse_position();
     void draw_info_box(SDL2pp::Renderer& renderer);
@@ -191,8 +202,8 @@ private:
     int x_axis_name_size() const;
     int y_axis_name_size() const;
     double static compute_grid_step(int min_nb, int max_nb, double range);
-    int static cast_to_int_check_limits(double x);
     void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
+    bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
 
     int m_width;
     int m_height;
