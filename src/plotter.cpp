@@ -96,6 +96,7 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                     default:
                         break;
                     }
+                    m_dirty_axis = true;
                     update_mouse_position();
                 }
                 else if (event.type == SDL_MOUSEWHEEL)
@@ -121,6 +122,7 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                             m_y_offset += m_mouse_y - previous_y;
                             update_mouse_position();
                         }
+                        m_dirty_axis = true;
                     }
                 }
                 else if (event.type == SDL_MOUSEMOTION)
@@ -129,6 +131,7 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                     {
                         m_x_offset += event.motion.xrel / m_x_zoom;
                         m_y_offset -= event.motion.yrel / m_y_zoom;
+                        m_dirty_axis = true;
                     }
                     update_mouse_position();
                 }
@@ -150,6 +153,7 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                     {
                         m_width = event.window.data1 - 2 * m_hmargin;
                         m_height = event.window.data2 - top_margin - plot_info_margin - x_axis_name_size() - info_height() - bottom_margin;
+                        m_dirty_axis = true;
                         break;
                     }
                     default:
@@ -171,7 +175,12 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
             center_sprite(renderer, title_sprite, (m_width + 2 * m_hmargin) / 2, top_margin / 2);
             draw_axis_titles(renderer);
 
-            draw_axis(renderer);
+            if (m_dirty_axis)
+            {
+                m_axis = determine_axis();
+                m_dirty_axis = false;
+            }
+            draw_axis(m_axis, renderer);
 
             draw_content(renderer);
 
@@ -231,25 +240,12 @@ int Plotter::y_axis_name_size() const
         return 2 * text_margin + small_font_size;
     return 0;
 }
-void Plotter::draw_axis(Renderer& renderer)
+
+tuple<vector<Plotter::Axis>, vector<Plotter::Axis>> Plotter::determine_axis() const
 {
-    auto draw_main_axis = [&]() {
-        Texture zero_sprite { renderer, m_small_font.RenderUTF8_Blended("0", SDL_Color(0, 0, 0, 255)) };
-        renderer.SetDrawColor(120, 120, 120, 255);
-        if (y_is_in_plot(to_plot_y<int>(0))) // abscissa
-        {
-            draw_horizontal_line_number(0., to_plot_y<int>(0.), renderer);
-            renderer.FillRect(Rect::FromCorners(m_hmargin, to_plot_y<int>(0) - line_width_half, m_hmargin + m_width, to_plot_y<int>(0) + line_width_half));
-        }
-        if (x_is_in_plot(to_plot_x<int>(0))) // ordinate
-        {
-            draw_vertical_line_number(0., to_plot_x<int>(0.), renderer);
-            renderer.FillRect(Rect::FromCorners(to_plot_x<int>(0) - line_width_half, top_margin, to_plot_x<int>(0) + line_width_half, top_margin + m_height));
-        }
-    };
-
-    // Draw secondary axis :
-
+    vector<Plotter::Axis> x;
+    vector<Plotter::Axis> y;
+    // Secondary axis :
     double x_max = from_plot_x(m_width);
     double x_min = from_plot_x(0);
     double y_max = from_plot_y(0);
@@ -269,14 +265,12 @@ void Plotter::draw_axis(Renderer& renderer)
     double rounded_x_min = round(x_min / x_step) * x_step;
     double rounded_y_min = round(y_min / y_step) * y_step;
 
-    renderer.SetDrawColor(180, 180, 180, 255);
     for (int i = 0; i < max_nb_horizontal_axis + 1; i++)
     {
         int ordinate = to_plot_y<int>(rounded_y_min + i * y_step);
         if (y_is_in_plot(ordinate))
         {
-            draw_horizontal_line_number(rounded_y_min + i * y_step, ordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(m_hmargin, ordinate - line_width_half, m_hmargin + m_width, ordinate + line_width_half));
+            x.push_back({ ordinate, rounded_y_min + i * y_step, false });
         }
     }
     for (int i = 0; i < max_nb_vertical_axis + 1; i++)
@@ -284,12 +278,54 @@ void Plotter::draw_axis(Renderer& renderer)
         int abscissa = to_plot_x<int>(rounded_x_min + i * x_step);
         if (x_is_in_plot(abscissa))
         {
-            draw_vertical_line_number(rounded_x_min + i * x_step, abscissa, renderer);
-            renderer.FillRect(Rect::FromCorners(abscissa - line_width_half, top_margin, abscissa + line_width_half, top_margin + m_height));
+            y.push_back({ abscissa, rounded_x_min + i * x_step, false });
+        }
+    }
+    // Main axis :
+    if (y_is_in_plot(to_plot_y<int>(0)))
+    {
+        x.push_back({ to_plot_y<int>(0.), 0., true });
+    }
+    if (x_is_in_plot(to_plot_x<int>(0)))
+    {
+        y.push_back({ to_plot_x<int>(0.), 0., true });
+    }
+    return {x, y};
+}
+
+void Plotter::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, Renderer& renderer)
+{
+    for (auto& e : get<0>(axis))
+    {
+        if (e.is_main)
+        {
+            renderer.SetDrawColor(120, 120, 120, 255);
+            draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
+            renderer.FillRect(Rect::FromCorners(m_hmargin, e.plot_coordinate - line_width_half, m_hmargin + m_width, e.plot_coordinate + line_width_half));
+        }
+        else
+        {
+            renderer.SetDrawColor(180, 180, 180, 255);
+            draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
+            renderer.FillRect(Rect::FromCorners(m_hmargin, e.plot_coordinate - line_width_half, m_hmargin + m_width, e.plot_coordinate + line_width_half));
         }
     }
 
-    draw_main_axis();
+    for (auto& e : get<1>(axis))
+    {
+        if (e.is_main)
+        {
+            renderer.SetDrawColor(120, 120, 120, 255);
+            draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
+            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin, e.plot_coordinate + line_width_half, top_margin + m_height));
+        }
+        else
+        {
+            renderer.SetDrawColor(180, 180, 180, 255);
+            draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
+            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin, e.plot_coordinate + line_width_half, top_margin + m_height));
+        }
+    }
 }
 
 double Plotter::compute_grid_step(int min_nb, int max_nb, double range)
@@ -367,10 +403,10 @@ void Plotter::center_sprite(Renderer& renderer, Texture& texture, int x, int y)
     renderer.Copy(texture, NullOpt, { x - texture.GetWidth() / 2, y - texture.GetHeight() / 2 });
 }
 
-std::string Plotter::to_str(double nb)
+std::string Plotter::to_str(double nb, int nb_digits)
 {
     ostringstream out;
-    out << setprecision(5);
+    out << setprecision(nb_digits);
     out << nb;
     return out.str();
 }

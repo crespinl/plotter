@@ -26,6 +26,7 @@ SPDX itentifier : GPL-3.0-or-later
 #include <plotter/firacode.hpp>
 #include <plotter/notosans.hpp>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -152,6 +153,7 @@ public:
         , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
         , m_hmargin(30 + 5 * m_small_font_advance + y_axis_name_size())
         , m_window_defined(false)
+        , m_dirty_axis(true)
     {
         if (!m_small_font.IsFixedWidth())
         {
@@ -170,14 +172,22 @@ private:
         int64_t x;
         int64_t y;
     };
+    struct Axis
+    {
+        int plot_coordinate;
+        double coordinate;
+        bool is_main;
+    };
     bool internal_plot(Orthonormal orthonormal, bool save, std::string const& name);
-    void draw_axis(SDL2pp::Renderer& renderer);
+    void draw_axis(std::tuple<std::vector<Axis>, std::vector<Axis>> const& axis, SDL2pp::Renderer& renderer);
     void draw_point(double x, double y, SDL2pp::Renderer& renderer); // Absolute coordinates
-    template <typename T> T to_plot_x(double x) const
+    template<typename T>
+    T to_plot_x(double x) const
     {
         return static_cast<T>(m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin);
     }
-    template <typename T> T to_plot_y(double y) const
+    template<typename T>
+    T to_plot_y(double y) const
     {
         return static_cast<T>(m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin);
     }
@@ -189,7 +199,7 @@ private:
     void draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer);
     void draw_axis_titles(SDL2pp::Renderer& renderer);
     void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
-    std::string to_str(double nb);
+    std::string to_str(double nb, int digits = nb_digits);
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     void plot_function(Function const& f, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     ScreenPoint to_point(Coordinate const& c) const;
@@ -201,6 +211,7 @@ private:
     void draw_content(SDL2pp::Renderer& renderer);
     int x_axis_name_size() const;
     int y_axis_name_size() const;
+    std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis() const;
     double static compute_grid_step(int min_nb, int max_nb, double range);
     void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
     bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
@@ -232,6 +243,8 @@ private:
     int m_small_font_advance;
     int m_hmargin;
     bool m_window_defined;
+    std::tuple<std::vector<Axis>, std::vector<Axis>> m_axis;
+    bool m_dirty_axis;
 
     static constexpr int top_margin = 50;
     static constexpr int plot_info_margin = 25;
@@ -248,6 +261,7 @@ private:
     static constexpr double min_spacing_between_axis = 80;  // In px
     static constexpr double max_spacing_between_axis = 200; // In px
     static constexpr int sampling_number_of_points = 5'000;
+    static constexpr int nb_digits = 5;
 };
 }
 
