@@ -191,13 +191,15 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                 save_img(window, renderer, name);
                 m_running = false;
             }
-
-            // Frame limiter
-            auto end = chrono::steady_clock::now();
-            std::chrono::duration<double> diff = end - start;
-            int duration_ms = round(diff.count() * 1000);
-            int to_wait = max(40 - duration_ms, 0); // Make the whole iteration take at least 1/25 s
-            this_thread::sleep_for(chrono::milliseconds(to_wait));
+            else
+            {
+                // Frame limiter
+                auto end = chrono::steady_clock::now();
+                std::chrono::duration<double> diff = end - start;
+                int duration_ms = round(diff.count() * 1000);
+                int to_wait = max(40 - duration_ms, 0); // Make the whole iteration take at least 1/25 s
+                this_thread::sleep_for(chrono::milliseconds(to_wait));
+            }
         }
     }
     catch (exception const& e)
@@ -290,7 +292,7 @@ tuple<vector<Plotter::Axis>, vector<Plotter::Axis>> Plotter::determine_axis() co
     {
         y.push_back({ to_plot_x<int>(0.), 0., true });
     }
-    return {x, y};
+    return { x, y };
 }
 
 void Plotter::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, Renderer& renderer)
