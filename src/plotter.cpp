@@ -164,6 +164,12 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
                 }
             }
 
+            if (m_dirty_axis)
+            {
+                m_axis = determine_axis();
+                m_dirty_axis = false;
+            }
+
             renderer.SetDrawColor(255, 255, 255, 255); // Clear the screen
             renderer.Clear();
 
@@ -175,11 +181,6 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
             center_sprite(renderer, title_sprite, (m_width + 2 * m_hmargin) / 2, top_margin / 2);
             draw_axis_titles(renderer);
 
-            if (m_dirty_axis)
-            {
-                m_axis = determine_axis();
-                m_dirty_axis = false;
-            }
             draw_axis(m_axis, renderer);
 
             draw_content(renderer);
@@ -243,7 +244,7 @@ int Plotter::y_axis_name_size() const
     return 0;
 }
 
-tuple<vector<Plotter::Axis>, vector<Plotter::Axis>> Plotter::determine_axis() const
+tuple<vector<Plotter::Axis>, vector<Plotter::Axis>> Plotter::determine_axis()
 {
     vector<Plotter::Axis> x;
     vector<Plotter::Axis> y;
@@ -267,14 +268,24 @@ tuple<vector<Plotter::Axis>, vector<Plotter::Axis>> Plotter::determine_axis() co
     double rounded_x_min = round(x_min / x_step) * x_step;
     double rounded_y_min = round(y_min / y_step) * y_step;
 
+    int max_ordinate_lenght = 5;
+
     for (int i = 0; i < max_nb_horizontal_axis + 1; i++)
     {
-        int ordinate = to_plot_y<int>(rounded_y_min + i * y_step);
+        double f_ordinate = rounded_y_min + i * y_step;
+        int ordinate = to_plot_y<int>(f_ordinate);
         if (y_is_in_plot(ordinate))
         {
-            x.push_back({ ordinate, rounded_y_min + i * y_step, false });
+            if (to_str(f_ordinate).size() > max_ordinate_lenght)
+                max_ordinate_lenght = to_str(f_ordinate).size();
+            x.push_back({ ordinate, f_ordinate, false });
         }
     }
+
+    // Update the horizontal margin according to label text lenght
+    m_hmargin = 30 + max_ordinate_lenght * m_small_font_advance + y_axis_name_size();
+    update_mouse_position();
+
     for (int i = 0; i < max_nb_vertical_axis + 1; i++)
     {
         int abscissa = to_plot_x<int>(rounded_x_min + i * x_step);
@@ -292,6 +303,7 @@ tuple<vector<Plotter::Axis>, vector<Plotter::Axis>> Plotter::determine_axis() co
     {
         y.push_back({ to_plot_x<int>(0.), 0., true });
     }
+
     return { x, y };
 }
 

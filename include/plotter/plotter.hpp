@@ -211,7 +211,7 @@ private:
     void draw_content(SDL2pp::Renderer& renderer);
     int x_axis_name_size() const;
     int y_axis_name_size() const;
-    std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis() const;
+    std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis();
     double static compute_grid_step(int min_nb, int max_nb, double range);
     void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
     bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
