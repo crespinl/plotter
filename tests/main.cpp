@@ -25,6 +25,8 @@ using namespace plotter;
 int main()
 {
     Plotter plotter { "Test Plot", "x axis", "y axis" };
+    plotter.add_sub_plot("Test sub plot", "same x axis", "different y axis");
+
     plotter.set_window(-10, 10, 20, 20);
     plotter.add_function({ [](double x) { return sin(x); }, "A sinus", default_color });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
@@ -32,10 +34,10 @@ int main()
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", default_color, DisplayPoints::Yes, DisplayLines::Yes });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
 
-    /* auto weierstrass_function = [](double x) -> double
+    auto weierstrass_function = [](double x) -> double
     {
         double y = 0;
-        for (int i = 0; i < 200;i++)
+        for (int i = 0; i < 20;i++)
         {
             constexpr double a = 0.5;
             constexpr double b = 2;
@@ -43,8 +45,7 @@ int main()
         }
         return y;
     };
-
-    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color });*/
+    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color }, 1);
     plotter.plot();
     plotter.save("test");
     return 0;

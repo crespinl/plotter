@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 SPDX itentifier : GPL-3.0-or-later
 */
+#pragma once
 #include <SDL2/SDL.h>
 #include <SDL2pp/SDL2pp.hh>
 #include <cstdint>
@@ -132,41 +133,30 @@ constexpr uint32_t B_MASK = 0x00ff0000;
 constexpr uint32_t A_MASK = 0xff000000;
 #endif
 
-class Plotter
+class Plotter;
+
+class SubPlot
 {
 public:
-    Plotter(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title)
-        : m_width(800)
+    SubPlot(Plotter& plotter, std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title, int font_advance)
+        : m_plotter(plotter)
+        , m_width(800)
         , m_height(600)
-        , m_running(false)
         , m_title(title)
         , m_x_title(x_title)
         , m_y_title(y_title)
-        , m_big_font_ops(SDL2pp::RWops::FromConstMem(notosans_ttf, notosans_ttf_len))
-        , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
-        , m_big_font(m_big_font_ops, big_font_size)
-        , m_small_font(m_small_font_ops, small_font_size)
-        , m_mouse_x(NAN)
-        , m_mouse_y(NAN)
-        , m_size_cursor(nullptr)
-        , m_arrow_cursor(nullptr)
-        , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
-        , m_hmargin(30 + 5 * m_small_font_advance + y_axis_name_size())
+        , m_hmargin(30 + 5 * font_advance + y_axis_name_size())
         , m_window_defined(false)
         , m_dirty_axis(true)
-    {
-        if (!m_small_font.IsFixedWidth())
-        {
-            throw std::runtime_error("The small font has to be fixed width");
-        }
-    }
-    bool plot(Orthonormal orthonormal = Orthonormal::No);
-    bool save(std::string const& name, Orthonormal orthonormal = Orthonormal::No);
+        , m_orthonormal(Orthonormal::No)
+    { }
     void add_collection(Collection const& c);
     void add_function(Function const& f);
     void set_window(double x, double y, double w, double h); // (x, y) are the coordinates of the top-left point
+    void set_orthonormal(Orthonormal o = Orthonormal::Yes) { m_orthonormal = o; }
 
 private:
+    friend class Plotter;
     struct ScreenPoint
     {
         int64_t x;
@@ -178,7 +168,25 @@ private:
         double coordinate;
         bool is_main;
     };
-    bool internal_plot(Orthonormal orthonormal, bool save, std::string const& name);
+    struct InfoLine
+    {
+        std::string name;
+        SDL_Color color;
+    };
+
+    // Methods that get called by Plotter
+    void event_x_move(int x);
+    void event_y_move(int y);
+    void event_zoom(float mouse_wheel, int mouse_x, int mouse_y);
+    void event_resize(int w, int h);
+    int min_width() const;
+    int min_height() const;
+    int width() const;
+    int height() const;
+    std::vector<InfoLine> infos() const;
+    std::unique_ptr<SDL2pp::Texture> internal_plot(SDL2pp::Renderer& renderer);
+    void initialize(); // This has to be called each time before a plot
+
     void draw_axis(std::tuple<std::vector<Axis>, std::vector<Axis>> const& axis, SDL2pp::Renderer& renderer);
     void draw_point(double x, double y, SDL2pp::Renderer& renderer); // Absolute coordinates
     template<typename T>
@@ -198,27 +206,21 @@ private:
     void draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer);
     void draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer);
     void draw_axis_titles(SDL2pp::Renderer& renderer);
-    void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
-    std::string to_str(double nb, int digits = nb_digits);
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     void plot_function(Function const& f, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     ScreenPoint to_point(Coordinate const& c) const;
     void draw_line(ScreenPoint const& p1, ScreenPoint const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, std::unordered_map<int, SDL2pp::Texture>& textures_pool);
-    int info_height() const { return (2 + m_collections.size() + m_functions.size()) * info_margin + (1 + (m_collections.size() + m_functions.size()) / 2) * m_small_font.GetHeight(); }
-    void update_mouse_position();
-    void draw_info_box(SDL2pp::Renderer& renderer);
-    void initialize_zoom_and_offset(Orthonormal orthonormal);
+    void initialize_zoom_and_offset();
     void draw_content(SDL2pp::Renderer& renderer);
     int x_axis_name_size() const;
     int y_axis_name_size() const;
     std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis();
     double static compute_grid_step(int min_nb, int max_nb, double range);
-    void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
     bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
 
+    Plotter& m_plotter;
     int m_width;
     int m_height;
-    bool m_running;
     double m_x_offset; // offsets are the coordinate of the actual 0 in reference to the original 0
     double m_y_offset;
     double m_x_zoom;
@@ -227,67 +229,102 @@ private:
     std::string m_title;
     std::optional<std::string> m_x_title;
     std::optional<std::string> m_y_title;
+    std::vector<Collection> m_collections;
+    std::vector<Function> m_functions;
+    int m_hmargin;
+    bool m_window_defined;
+    std::tuple<std::vector<Axis>, std::vector<Axis>> m_axis;
+    bool m_dirty_axis;
+    Orthonormal m_orthonormal;
+    std::unique_ptr<SDL2pp::Texture> m_texture;
+
+    static constexpr int top_margin = 50;
+    static constexpr int bottom_margin = 10;
+    static constexpr int line_width_half = 1;
+    static constexpr int half_point_size = 4;
+    static constexpr double zoom_factor = 1.3;
+    static constexpr int plot_min_width = 160;
+    static constexpr int plot_min_height = 120;
+    static constexpr double min_spacing_between_axis = 80;  // In px
+    static constexpr double max_spacing_between_axis = 200; // In px
+    static constexpr int sampling_number_of_points = 5'000;
+};
+
+class Plotter
+{
+public:
+    friend class SubPlot;
+    Plotter(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title)
+        : m_running(false)
+        , m_big_font_ops(SDL2pp::RWops::FromConstMem(notosans_ttf, notosans_ttf_len))
+        , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
+        , m_big_font(m_big_font_ops, big_font_size)
+        , m_small_font(m_small_font_ops, small_font_size)
+        , m_size_cursor(nullptr)
+        , m_arrow_cursor(nullptr)
+        , m_subplot_mouse_selected(-1)
+        , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
+    {
+        construct(title, x_title, y_title);
+    }
+    bool plot(Orthonormal orthonormal = Orthonormal::No);
+    bool save(std::string const& name, Orthonormal orthonormal = Orthonormal::No);
+    void add_collection(Collection const& c, int n = 0);
+    void add_function(Function const& f, int n = 0);
+    void set_window(double x, double y, double w, double h, int n = 0); // (x, y) are the coordinates of the top-left point
+    SubPlot& add_sub_plot(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title);
+
+private:
+    friend class SubPlot;
+    struct ScreenPoint
+    {
+        int64_t x;
+        int64_t y;
+    };
+    struct Axis
+    {
+        int plot_coordinate;
+        double coordinate;
+        bool is_main;
+    };
+    void construct(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title);
+    bool internal_plot(Orthonormal orthonormal, bool save, std::string const& name);
+    void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
+    std::string static to_str(double nb, int digits = nb_digits);
+    int info_height() const { return (3 + m_infos.size() / 2) * info_margin + (2 + m_infos.size() / 2) * m_small_font.GetHeight(); }
+    void draw_info_box(SDL2pp::Renderer& renderer);
+    void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
+    void update_mouse_position();
+    size_t hovered_sub_plot() const;
+    void add_info_line(SubPlot::InfoLine const& i);
+    int base_y_of_hovered_subplot() const;
+
+    bool m_running;
     SDL2pp::SDLTTF m_ttf;
     SDL2pp::RWops m_big_font_ops;
     SDL2pp::RWops m_small_font_ops;
     SDL2pp::Font m_big_font;
     SDL2pp::Font m_small_font;
-    std::vector<Collection> m_collections;
-    std::vector<Function> m_functions;
-    double m_mouse_x;
-    double m_mouse_y;
-    bool m_mouse_down;
+    int m_mouse_x;
+    int m_mouse_y;
+    size_t m_subplot_mouse_selected;
     SDL_Cursor* m_size_cursor;
     SDL_Cursor* m_arrow_cursor;
     ColorGenerator m_color_generator;
     int m_small_font_advance;
-    int m_hmargin;
-    bool m_window_defined;
-    std::tuple<std::vector<Axis>, std::vector<Axis>> m_axis;
-    bool m_dirty_axis;
+    std::vector<SubPlot::InfoLine> m_infos;
+    std::vector<SubPlot> m_sub_plots;
 
-    static constexpr int top_margin = 50;
-    static constexpr int plot_info_margin = 25;
+    static constexpr int plot_info_margin = 10;
     static constexpr int info_margin = 5;
-    static constexpr int bottom_margin = 25;
-    static constexpr int line_width_half = 1;
-    static constexpr int half_point_size = 4;
-    static constexpr double zoom_factor = 1.3;
     static constexpr int big_font_size = 24;
     static constexpr int small_font_size = 15;
     static constexpr int text_margin = 5;
     static constexpr int min_width = 160;
     static constexpr int min_height = 120;
-    static constexpr double min_spacing_between_axis = 80;  // In px
-    static constexpr double max_spacing_between_axis = 200; // In px
-    static constexpr int sampling_number_of_points = 5'000;
+    static constexpr int out_of_the_screen = -1;
     static constexpr int nb_digits = 5;
+    static constexpr int info_box_hmargin = 40;
+    static constexpr size_t no_sub_plot_hovered = -1;
 };
 }
-
-/*
-Warning :
-for SDL, axis are like that :
-
-0
-------------> x
-|
-|
-|
-|
-|
-\/
-y
-
-the idea is to have Plotter coordinates work that way :
-
-            y
-            /\
-            |
-            |
-            |0
------------------------> x
-            |
-            |
-            |
-*/
