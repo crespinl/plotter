@@ -260,15 +260,15 @@ public:
         , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
         , m_big_font(m_big_font_ops, big_font_size)
         , m_small_font(m_small_font_ops, small_font_size)
+        , m_subplot_mouse_selected(-1)
         , m_size_cursor(nullptr)
         , m_arrow_cursor(nullptr)
-        , m_subplot_mouse_selected(-1)
         , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
     {
         construct(title, x_title, y_title);
     }
-    bool plot(Orthonormal orthonormal = Orthonormal::No);
-    bool save(std::string const& name, Orthonormal orthonormal = Orthonormal::No);
+    bool plot();
+    bool save(std::string const& name);
     void add_collection(Collection const& c, int n = 0);
     void add_function(Function const& f, int n = 0);
     void set_window(double x, double y, double w, double h, int n = 0); // (x, y) are the coordinates of the top-left point
@@ -288,7 +288,7 @@ private:
         bool is_main;
     };
     void construct(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title);
-    bool internal_plot(Orthonormal orthonormal, bool save, std::string const& name);
+    bool internal_plot(bool save, std::string const& name);
     void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
     std::string static to_str(double nb, int digits = nb_digits);
     int info_height() const { return (3 + m_infos.size() / 2) * info_margin + (2 + m_infos.size() / 2) * m_small_font.GetHeight(); }

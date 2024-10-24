@@ -32,17 +32,17 @@ namespace plotter
 using namespace std;
 using namespace SDL2pp;
 
-bool Plotter::plot(Orthonormal orthonormal)
+bool Plotter::plot()
 {
-    return internal_plot(orthonormal, false, "");
+    return internal_plot(false, "");
 }
 
-bool Plotter::save(string const& name, Orthonormal orthonormal)
+bool Plotter::save(string const& name)
 {
-    return internal_plot(orthonormal, true, name);
+    return internal_plot(true, name);
 }
 
-bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string const& name)
+bool Plotter::internal_plot(bool save, std::string const& name)
 {
     try
     {
@@ -63,7 +63,7 @@ bool Plotter::internal_plot(Orthonormal orthonormal, bool save, std::string cons
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
-        m_subplot_mouse_selected = -1;
+        m_subplot_mouse_selected = no_sub_plot_hovered;
         m_arrow_cursor = SDL_GetCursor();
         m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
         SDL_Event event;
@@ -248,7 +248,7 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
 
     update_mouse_position();
     size_t h = hovered_sub_plot();
-    if (h == out_of_the_screen)
+    if (h == no_sub_plot_hovered)
     {
         return;
     }
@@ -684,7 +684,7 @@ void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& 
         renderer.SetTarget(into);
         texture = textures_pool.insert({ w, move(sprite) }).first;
     }
-    Point dst_point { x1 + static_cast<int64_t>(2. * line_width_half * sin(angle)), y1 + static_cast<int64_t>(-2. * line_width_half * cos(angle)) }; // offset due to rotation
+    Point dst_point { static_cast<int>(x1 + static_cast<int>(2. * line_width_half * sin(angle))), static_cast<int>(y1 + static_cast<int>(-2. * line_width_half * cos(angle))) }; // offset due to rotation
     angle *= 360 / (2 * numbers::pi_v<double>);                                                                                                      // to degree
     renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
 }
@@ -877,7 +877,7 @@ size_t Plotter::hovered_sub_plot() const
         if (offset >= m_mouse_y)
             return i;
     }
-    return out_of_the_screen;
+    return no_sub_plot_hovered;
 }
 int Plotter::base_y_of_hovered_subplot() const
 {
