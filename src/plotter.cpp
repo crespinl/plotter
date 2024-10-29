@@ -738,6 +738,8 @@ void SubPlot::initialize()
     if (!m_window_defined)
         initialize_zoom_and_offset();
     m_bottom_margin = m_plotter.text_margin + 2 * m_small_font_advance;
+    m_x_label_margin = 0;//This has to have a value before determine_axis() is called, but we don't care exactly what
+    determine_axis(); // This is needed because it computes m_x_label_margin
 }
 
 void SubPlot::initialize_zoom_and_offset()
