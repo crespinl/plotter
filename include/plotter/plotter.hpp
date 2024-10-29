@@ -145,10 +145,10 @@ public:
         , m_title(title)
         , m_x_title(x_title)
         , m_y_title(y_title)
-        , m_hmargin(30 + 5 * font_advance + y_axis_name_size())
         , m_window_defined(false)
         , m_dirty_axis(true)
         , m_orthonormal(Orthonormal::No)
+        , m_small_font_advance(font_advance)
     { }
     void add_collection(Collection const& c);
     void add_function(Function const& f);
@@ -192,12 +192,12 @@ private:
     template<typename T>
     T to_plot_x(double x) const
     {
-        return static_cast<T>(m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + m_hmargin);
+        return static_cast<T>(m_width / 2 + x * m_x_zoom + m_x_offset * m_x_zoom + hmargin + y_axis_name_size() + m_x_label_margin);
     }
     template<typename T>
     T to_plot_y(double y) const
     {
-        return static_cast<T>(m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin);
+        return static_cast<T>(m_height / 2 - y * m_y_zoom - m_y_offset * m_y_zoom + top_margin + title_size());
     }
     double from_plot_x(int x) const;
     double from_plot_y(int x) const;
@@ -212,11 +212,13 @@ private:
     void draw_line(ScreenPoint const& p1, ScreenPoint const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, std::unordered_map<int, SDL2pp::Texture>& textures_pool);
     void initialize_zoom_and_offset();
     void draw_content(SDL2pp::Renderer& renderer);
-    int x_axis_name_size() const;
-    int y_axis_name_size() const;
     std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis();
     double static compute_grid_step(int min_nb, int max_nb, double range);
     bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
+
+    int title_size() const;
+    int x_axis_name_size() const;
+    int y_axis_name_size() const;
 
     Plotter& m_plotter;
     int m_width;
@@ -231,15 +233,17 @@ private:
     std::optional<std::string> m_y_title;
     std::vector<Collection> m_collections;
     std::vector<Function> m_functions;
-    int m_hmargin;
     bool m_window_defined;
     std::tuple<std::vector<Axis>, std::vector<Axis>> m_axis;
     bool m_dirty_axis;
     Orthonormal m_orthonormal;
     std::unique_ptr<SDL2pp::Texture> m_texture;
+    int m_small_font_advance;
+    int m_x_label_margin;
+    int m_bottom_margin;
 
-    static constexpr int top_margin = 50;
-    static constexpr int bottom_margin = 10;
+    static constexpr int top_margin = 20;
+    static constexpr int hmargin = 10;
     static constexpr int line_width_half = 1;
     static constexpr int half_point_size = 4;
     static constexpr double zoom_factor = 1.3;
@@ -291,7 +295,7 @@ private:
     bool internal_plot(bool save, std::string const& name);
     void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
     std::string static to_str(double nb, int digits = nb_digits);
-    int info_height() const { return (3 + m_infos.size() / 2) * info_margin + (2 + m_infos.size() / 2) * m_small_font.GetHeight(); }
+    int info_height() const;
     void draw_info_box(SDL2pp::Renderer& renderer);
     void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
     void update_mouse_position();

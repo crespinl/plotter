@@ -216,6 +216,14 @@ std::string Plotter::to_str(double nb, int nb_digits)
     return out.str();
 }
 
+int Plotter::info_height() const
+{
+    int infos_lines = 1 + m_infos.size() / 2; // The space for mouse coordinates + functions and collections
+    if (m_infos.size() % 2 != 0)
+        infos_lines += 1; // Add one more line if the number is not even
+    return (infos_lines + 1) * info_margin + infos_lines * m_small_font.GetHeight();
+}
+
 void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
 {
     int offset = plot_info_margin + info_margin;
@@ -333,9 +341,9 @@ std::unique_ptr<SDL2pp::Texture> SubPlot::internal_plot(Renderer& renderer)
     renderer.SetDrawColor(255, 255, 255, 255); // Clear the screen
     renderer.Clear();
     renderer.SetDrawColor(0, 0, 0, 255);
-    renderer.DrawRect(Rect::FromCorners(m_hmargin, top_margin, m_hmargin + m_width, top_margin + m_height)); // Draw the plot box
+    renderer.DrawRect(Rect { hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height }); // Draw the plot box
     Texture title_sprite { renderer, m_plotter.m_big_font.RenderUTF8_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
-    Plotter::center_sprite(renderer, title_sprite, (m_width + 2 * m_hmargin) / 2, top_margin / 2);
+    Plotter::center_sprite(renderer, title_sprite, width() / 2, (top_margin + title_size()) / 2);
     draw_axis_titles(renderer);
     draw_axis(m_axis, renderer);
     draw_content(renderer);
@@ -344,7 +352,7 @@ std::unique_ptr<SDL2pp::Texture> SubPlot::internal_plot(Renderer& renderer)
 
 void SubPlot::draw_content(SDL2pp::Renderer& renderer)
 {
-    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_hmargin + m_width, top_margin + m_height };
+    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, width() - hmargin, top_margin + title_size() + m_height };
     sprite.SetBlendMode(SDL_BLENDMODE_BLEND);
     renderer.SetTarget(sprite);
     renderer.SetDrawColor(0, 0, 0, 0);
@@ -358,13 +366,13 @@ void SubPlot::draw_content(SDL2pp::Renderer& renderer)
     {
         plot_function(e, renderer, sprite);
     }
-    renderer.Copy(sprite, Rect { m_hmargin, top_margin, m_width, m_height }, { m_hmargin, top_margin });
+    renderer.Copy(sprite, Rect { hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height }, { hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size() });
 }
 
 int SubPlot::x_axis_name_size() const
 {
     if (m_x_title)
-        return 2 * m_plotter.text_margin + m_plotter.small_font_size;
+        return m_plotter.text_margin + m_plotter.small_font_size; // Just one margin is enough
     return 0;
 }
 int SubPlot::y_axis_name_size() const
@@ -372,6 +380,10 @@ int SubPlot::y_axis_name_size() const
     if (m_y_title)
         return 2 * m_plotter.text_margin + m_plotter.small_font_size;
     return 0;
+}
+int SubPlot::title_size() const
+{
+    return 20; // TODO : have the exact value
 }
 
 tuple<vector<SubPlot::Axis>, vector<SubPlot::Axis>> SubPlot::determine_axis()
@@ -398,7 +410,7 @@ tuple<vector<SubPlot::Axis>, vector<SubPlot::Axis>> SubPlot::determine_axis()
     double rounded_x_min = round(x_min / x_step) * x_step;
     double rounded_y_min = round(y_min / y_step) * y_step;
 
-    size_t max_ordinate_lenght = 5;
+    size_t max_ordinate_lenght = 3;
 
     for (int i = 0; i < max_nb_horizontal_axis + 1; i++)
     {
@@ -413,8 +425,11 @@ tuple<vector<SubPlot::Axis>, vector<SubPlot::Axis>> SubPlot::determine_axis()
     }
 
     // Update the horizontal margin according to label text lenght
-    m_hmargin = 20 + max_ordinate_lenght * m_plotter.m_small_font_advance + y_axis_name_size();
-    // TODO : propagate width change, or reduce m_width
+    int old_x_label_margin = m_x_label_margin;
+    int old_width = width();
+    m_x_label_margin = max_ordinate_lenght * m_plotter.m_small_font_advance + 2 * m_plotter.text_margin;
+    if (old_x_label_margin != m_x_label_margin)
+        event_resize(old_width, height());
 
     for (int i = 0; i < max_nb_vertical_axis + 1; i++)
     {
@@ -445,13 +460,13 @@ void SubPlot::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, Renderer&
         {
             renderer.SetDrawColor(120, 120, 120, 255);
             draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(m_hmargin, e.plot_coordinate - line_width_half, m_hmargin + m_width, e.plot_coordinate + line_width_half));
+            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_half, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_half));
         }
         else
         {
             renderer.SetDrawColor(180, 180, 180, 255);
             draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(m_hmargin, e.plot_coordinate - line_width_half, m_hmargin + m_width, e.plot_coordinate + line_width_half));
+            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_half, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_half));
         }
     }
 
@@ -461,13 +476,13 @@ void SubPlot::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, Renderer&
         {
             renderer.SetDrawColor(120, 120, 120, 255);
             draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin, e.plot_coordinate + line_width_half, top_margin + m_height));
+            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin + title_size(), e.plot_coordinate + line_width_half, top_margin + title_size() + m_height));
         }
         else
         {
             renderer.SetDrawColor(180, 180, 180, 255);
             draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin, e.plot_coordinate + line_width_half, top_margin + m_height));
+            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin + title_size(), e.plot_coordinate + line_width_half, top_margin + title_size() + m_height));
         }
     }
 }
@@ -501,31 +516,31 @@ void SubPlot::draw_point(double x, double y, Renderer& renderer)
 
 double SubPlot::from_plot_x(int x) const
 {
-    return ((double)x - m_hmargin - (double)m_width / 2.) / m_x_zoom - m_x_offset;
+    return ((double)x - (hmargin + y_axis_name_size() + m_x_label_margin) - (double)m_width / 2.) / m_x_zoom - m_x_offset;
 }
 double SubPlot::from_plot_y(int x) const
 {
-    return (-x + top_margin + (double)m_height / 2.) / m_y_zoom - m_y_offset;
+    return (-x + top_margin + title_size() + (double)m_height / 2.) / m_y_zoom - m_y_offset;
 }
 bool SubPlot::x_is_in_plot(int x) const
 {
-    return x > m_hmargin && x < m_hmargin + m_width;
+    return x > hmargin + y_axis_name_size() + m_x_label_margin && x < hmargin + y_axis_name_size() + m_x_label_margin + m_width;
 }
 bool SubPlot::y_is_in_plot(int y) const
 {
-    return y > top_margin && y < top_margin + m_height;
+    return y > top_margin + title_size() && y < top_margin + title_size() + m_height;
 }
 
 void SubPlot::draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer)
 {
     Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(Plotter::to_str(nb), SDL_Color(0, 0, 0, 255)) };
-    Plotter::center_sprite(renderer, sprite, x, top_margin + m_height + m_plotter.text_margin + sprite.GetHeight() / 2);
+    Plotter::center_sprite(renderer, sprite, x, top_margin + title_size() + m_height + m_bottom_margin / 2);
 }
 
 void SubPlot::draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer)
 {
     Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(Plotter::to_str(nb), SDL_Color(0, 0, 0, 255)) };
-    Plotter::center_sprite(renderer, sprite, m_hmargin - m_plotter.text_margin - sprite.GetWidth() / 2, y);
+    Plotter::center_sprite(renderer, sprite, hmargin + y_axis_name_size() + m_x_label_margin / 2, y);
 }
 
 void SubPlot::draw_axis_titles(SDL2pp::Renderer& renderer)
@@ -533,12 +548,12 @@ void SubPlot::draw_axis_titles(SDL2pp::Renderer& renderer)
     if (m_y_title)
     {
         Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(*m_y_title, SDL_Color(0, 0, 0, 255)) };
-        renderer.Copy(sprite, NullOpt, { 30 + m_plotter.text_margin - sprite.GetWidth() / 2 - m_plotter.small_font_size / 2, m_height / 2 + top_margin }, 270);
+        renderer.Copy(sprite, NullOpt, { hmargin + m_plotter.text_margin, m_height / 2 + sprite.GetWidth() / 2 + top_margin + title_size() }, 270, Point { 0, 0 });
     }
     if (m_x_title)
     {
         Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(*m_x_title, SDL_Color(0, 0, 0, 255)) };
-        Plotter::center_sprite(renderer, sprite, m_hmargin + m_width / 2, top_margin + m_height + m_plotter.small_font_size + m_plotter.text_margin + m_plotter.small_font_size / 2);
+        Plotter::center_sprite(renderer, sprite, hmargin + y_axis_name_size() + m_x_label_margin + m_width / 2, top_margin + title_size() + m_height + m_bottom_margin + x_axis_name_size() / 2);
     }
 }
 
@@ -551,10 +566,10 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     renderer.SetTarget(into);
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
-        if ((to_plot_x<int>(c.points[i].x) < m_hmargin && to_plot_x<int>(c.points[i + 1].x) < m_hmargin)
-            || (to_plot_x<int>(c.points[i].x) > m_hmargin + m_width && to_plot_x<int>(c.points[i + 1].x) > m_hmargin + m_width)
-            || (to_plot_y<int>(c.points[i].y) < top_margin && to_plot_y<int>(c.points[i + 1].y) < top_margin)
-            || (to_plot_y<int>(c.points[i].y) > top_margin + m_height && to_plot_y<int>(c.points[i + 1].y) > top_margin + m_height))
+        if ((to_plot_x<int>(c.points[i].x) < hmargin + y_axis_name_size() + m_x_label_margin && to_plot_x<int>(c.points[i + 1].x) < hmargin + y_axis_name_size() + m_x_label_margin)
+            || (to_plot_x<int>(c.points[i].x) > hmargin + y_axis_name_size() + m_x_label_margin + m_width && to_plot_x<int>(c.points[i + 1].x) > hmargin + y_axis_name_size() + m_x_label_margin + m_width)
+            || (to_plot_y<int>(c.points[i].y) < top_margin + title_size() && to_plot_y<int>(c.points[i + 1].y) < top_margin + title_size())
+            || (to_plot_y<int>(c.points[i].y) > top_margin + title_size() + m_height && to_plot_y<int>(c.points[i + 1].y) > top_margin + title_size() + m_height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
         if (c.display_points == DisplayPoints::Yes)
             draw_point(c.points[i].x, c.points[i].y, renderer);
@@ -568,8 +583,8 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
 
 void SubPlot::plot_function(Function const& f, SDL2pp::Renderer& renderer, Texture& into)
 {
-    double x_min = from_plot_x(m_hmargin);
-    double x_max = from_plot_x(m_hmargin + m_width);
+    double x_min = from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin);
+    double x_max = from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin + m_width);
     vector<Coordinate> coordinates;
     coordinates.reserve(sampling_number_of_points);
     for (int i = 0; i < sampling_number_of_points; i++)
@@ -662,7 +677,7 @@ void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& 
     int64_t x2 = p2.x;
     int64_t y1 = p1.y;
     int64_t y2 = p2.y;
-    intersect_rect_and_line(m_hmargin, top_margin, m_width, m_height, x1, x2, y1, y2);
+    intersect_rect_and_line(hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height, x1, x2, y1, y2);
     double const max_w = sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height);
     double w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
     int w;
@@ -685,7 +700,7 @@ void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& 
         texture = textures_pool.insert({ w, move(sprite) }).first;
     }
     Point dst_point { static_cast<int>(x1 + static_cast<int>(2. * line_width_half * sin(angle))), static_cast<int>(y1 + static_cast<int>(-2. * line_width_half * cos(angle))) }; // offset due to rotation
-    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                                      // to degree
+    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                                                                  // to degree
     renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
 }
 
@@ -722,6 +737,7 @@ void SubPlot::initialize()
 {
     if (!m_window_defined)
         initialize_zoom_and_offset();
+    m_bottom_margin = m_plotter.text_margin + 2 * m_small_font_advance;
 }
 
 void SubPlot::initialize_zoom_and_offset()
@@ -790,7 +806,7 @@ void SubPlot::event_x_move(int x)
 
 void SubPlot::event_y_move(int y)
 {
-    m_y_offset += y / m_x_zoom;
+    m_y_offset += y / m_y_zoom;
     m_dirty_axis = true;
 }
 
@@ -801,7 +817,7 @@ void SubPlot::event_zoom(float mouse_wheel, int mouse_x, int mouse_y)
     double back_x_zoom = m_x_zoom;
     m_x_zoom *= pow(zoom_factor, mouse_wheel);
     m_y_zoom = m_x_zoom * m_y_x_ratio;
-    if (from_plot_x(m_hmargin) == from_plot_x(m_hmargin + 2 * line_width_half) || from_plot_y(top_margin) == from_plot_y(top_margin + 2 * line_width_half))
+    if (from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin) == from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin + 2 * line_width_half) || from_plot_y(top_margin + title_size()) == from_plot_y(top_margin + title_size() + 2 * line_width_half))
     {
         // We were too far and can't distinguish two points close to each other anymore
         m_x_zoom = back_x_zoom;
@@ -824,29 +840,29 @@ void SubPlot::event_zoom(float mouse_wheel, int mouse_x, int mouse_y)
 
 void SubPlot::event_resize(int w, int h)
 {
-    m_width = w - 2 * m_hmargin;
-    m_height = h - top_margin - x_axis_name_size() - bottom_margin;
+    m_width = w - 2 * hmargin - y_axis_name_size() - m_x_label_margin;
+    m_height = h - top_margin - title_size() - x_axis_name_size() - m_bottom_margin;
     m_dirty_axis = true;
 }
 
 int SubPlot::min_width() const
 {
-    return 2 * m_hmargin + plot_min_width;
+    return 2 * hmargin + plot_min_width + y_axis_name_size() + m_x_label_margin;
 }
 
 int SubPlot::min_height() const
 {
-    return top_margin + plot_min_height + x_axis_name_size() + bottom_margin;
+    return top_margin + title_size() + plot_min_height + x_axis_name_size() + m_bottom_margin;
 }
 
 int SubPlot::width() const
 {
-    return 2 * m_hmargin + m_width;
+    return 2 * hmargin + m_width + y_axis_name_size() + m_x_label_margin;
 }
 
 int SubPlot::height() const
 {
-    return top_margin + m_height + x_axis_name_size() + bottom_margin;
+    return top_margin + title_size() + m_height + x_axis_name_size() + m_bottom_margin;
 }
 
 vector<SubPlot::InfoLine> SubPlot::infos() const

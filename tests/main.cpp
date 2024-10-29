@@ -33,7 +33,6 @@ int main()
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", default_color, DisplayPoints::Yes, DisplayLines::Yes });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
 
-    /*
     plotter.add_sub_plot("Test sub plot", "same x axis", "different y axis");
     auto weierstrass_function = [](double x) -> double
     {
@@ -46,7 +45,7 @@ int main()
         }
         return y;
     };
-    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color }, 1);*/
+    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color }, 1);
     plotter.plot();
     plotter.save("test");
     return 0;
