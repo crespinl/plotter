@@ -20,14 +20,18 @@ cmake_minimum_required(VERSION 3.26)
 project(plotter VERSION 1.0.0)
 
 find_package(SDL2 REQUIRED)
-find_package(SDL2pp REQUIRED)
+
+set(SDL2PP_WITH_IMAGE ON)
+set(SDL2PP_WITH_TTF ON)
+add_subdirectory(libSDL2pp)
+#find_package(SDL2pp REQUIRED)
 
 set(LIBRARY_OUTPUT_PATH lib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -fdiagnostics-color=always")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 
 set(SRCS
     src/plotter.cpp
@@ -54,7 +58,7 @@ target_link_libraries(plotter PUBLIC SDL2::SDL2 SDL2pp::SDL2pp)
 
 include(GNUInstallDirs)
 
-install(TARGETS plotter
+install(TARGETS SDL2pp plotter
     EXPORT plotterTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
