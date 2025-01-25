@@ -52,14 +52,27 @@ bool Plotter::internal_plot(bool save, std::string const& name)
         for_each(m_sub_plots.begin(), m_sub_plots.end(), [](SubPlot& s) { s.initialize(); });
 
         int h = 0;
-        for_each(m_sub_plots.begin(), m_sub_plots.end(), [&h](SubPlot const& s) { h += s.height(); });
-
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_sub_plots.front().width(), h + plot_info_margin + info_height(), (save ? SDL_WINDOW_HIDDEN : SDL_WINDOW_SHOWN) | SDL_WINDOW_RESIZABLE);
-
+        int w = 0;
         int min_h = 0;
-        for_each(m_sub_plots.begin(), m_sub_plots.end(), [&min_h](SubPlot const& s) { min_h += s.min_height(); });
+        int min_w = 0;
+        if (m_stacking_direction == StackingDirection::Vertical)
+        {
+            for_each(m_sub_plots.begin(), m_sub_plots.end(), [&h](SubPlot const& s) { h += s.height(); });
+            for_each(m_sub_plots.begin(), m_sub_plots.end(), [&min_h](SubPlot const& s) { min_h += s.min_height(); });
+            w = m_sub_plots.front().width();
+            min_w = m_sub_plots.front().min_width();
+        }
+        else
+        {
+            for_each(m_sub_plots.begin(), m_sub_plots.end(), [&w](SubPlot const& s) { w += s.width(); });
+            for_each(m_sub_plots.begin(), m_sub_plots.end(), [&min_w](SubPlot const& s) { min_w += s.min_width(); });
+            h = m_sub_plots.front().height();
+            min_h = m_sub_plots.front().min_height();
+        }
 
-        window.SetMinimumSize(m_sub_plots.front().min_width(), min_h + plot_info_margin + info_height());
+        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h + plot_info_margin + info_height(), (save ? SDL_WINDOW_HIDDEN : SDL_WINDOW_SHOWN) | SDL_WINDOW_RESIZABLE);
+
+        window.SetMinimumSize(min_w, min_h + plot_info_margin + info_height());
         Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
 
         m_running = true;
@@ -119,7 +132,7 @@ bool Plotter::internal_plot(bool save, std::string const& name)
                     update_mouse_position();
                     size_t hovered = hovered_sub_plot();
                     if (hovered != no_sub_plot_hovered)
-                        m_sub_plots[hovered].event_zoom(event.wheel.preciseY, m_mouse_x, m_mouse_y - base_y_of_hovered_subplot());
+                        m_sub_plots[hovered].event_zoom(event.wheel.preciseY, m_mouse_x - base_x_of_hovered_subplot(), m_mouse_y - base_y_of_hovered_subplot());
                 }
                 else if (event.type == SDL_MOUSEMOTION)
                 {
@@ -149,7 +162,10 @@ bool Plotter::internal_plot(bool save, std::string const& name)
                     {
                         for_each(m_sub_plots.begin(), m_sub_plots.end(), [&](SubPlot& s) {
                             // TODO : if step is less than m_sub_plots.size()
-                            s.event_resize(event.window.data1, (event.window.data2 - plot_info_margin - info_height()) / m_sub_plots.size());
+                            if (m_stacking_direction == StackingDirection::Vertical)
+                                s.event_resize(event.window.data1, (event.window.data2 - plot_info_margin - info_height()) / m_sub_plots.size());
+                            else
+                                s.event_resize(event.window.data1 / m_sub_plots.size(), event.window.data2 - plot_info_margin - info_height());
                         });
                         break;
                     }
@@ -167,13 +183,27 @@ bool Plotter::internal_plot(bool save, std::string const& name)
             renderer.SetDrawColor(0, 0, 0, 255);
             draw_info_box(renderer);
 
-            int offset = 0;
-            for (auto& e : m_sub_plots)
+            if (m_stacking_direction == StackingDirection::Vertical)
             {
-                auto texture = e.internal_plot(renderer);
-                renderer.SetTarget();
-                renderer.Copy(*texture, NullOpt, Point { 0, offset });
-                offset += e.height();
+                int offset = 0;
+                for (auto& e : m_sub_plots)
+                {
+                    auto texture = e.internal_plot(renderer);
+                    renderer.SetTarget();
+                    renderer.Copy(*texture, NullOpt, Point { 0, offset });
+                    offset += e.height();
+                }
+            }
+            else
+            {
+                int offset = 0;
+                for (auto& e : m_sub_plots)
+                {
+                    auto texture = e.internal_plot(renderer);
+                    renderer.SetTarget();
+                    renderer.Copy(*texture, NullOpt, Point { offset, 0 });
+                    offset += e.width();
+                }
             }
 
             renderer.Present();
@@ -224,24 +254,59 @@ int Plotter::info_height() const
     return (infos_lines + 1) * info_margin + infos_lines * m_small_font.GetHeight();
 }
 
+int Plotter::width() const
+{
+    int w = 0;
+    if (m_stacking_direction == StackingDirection::Horizontal)
+    {
+        for_each(m_sub_plots.cbegin(), m_sub_plots.cend(), [&w](SubPlot const& s) { w += s.width(); });
+    }
+    else
+    {
+        w = m_sub_plots.front().width();
+    }
+    return w;
+}
+
+int Plotter::height() const
+{
+    int h = 0;
+    if (m_stacking_direction == StackingDirection::Vertical)
+    {
+        for_each(m_sub_plots.cbegin(), m_sub_plots.cend(), [&h](SubPlot const& s) { h += s.height(); });
+    }
+    else
+    {
+        h = m_sub_plots.front().height();
+    }
+    return h + plot_info_margin + info_height();
+}
+
 void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
 {
     int offset = plot_info_margin + info_margin;
-    for_each(m_sub_plots.begin(), m_sub_plots.end(), [&offset](SubPlot const& s) {
-        offset += s.height();
-    });
+    if (m_stacking_direction == StackingDirection::Vertical)
+    {
+        for_each(m_sub_plots.begin(), m_sub_plots.end(), [&offset](SubPlot const& s) {
+            offset += s.height();
+        });
+    }
+    else
+    {
+        offset = m_sub_plots.front().height();
+    }
 
-    int const width = m_sub_plots.front().width() - 2 * info_box_hmargin;
+    int const w = width() - 2 * info_box_hmargin;
     size_t i = 0;
     for (; i < m_infos.size(); i++)
     {
-        int hpos = (i % 2 == 0) ? 0 : width / 2;
+        int hpos = (i % 2 == 0) ? 0 : w / 2;
         renderer.SetDrawColor(m_infos[i].color);
         renderer.FillRect(Rect { info_box_hmargin + hpos, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
         string text = m_infos[i].name;
-        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)width / 2) // make sure it will not take too much space
+        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)w / 2) // make sure it will not take too much space
         {
-            int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - width / 2) / m_small_font_advance;
+            int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - w / 2) / m_small_font_advance;
             text.resize(text.size() - extra_chars - 4);
             text += "...";
         }
@@ -260,16 +325,17 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     {
         return;
     }
+    int x_offset = base_x_of_hovered_subplot();
     int y_offset = base_y_of_hovered_subplot();
-    if (y_offset == out_of_the_screen)
+    if (x_offset == out_of_the_screen || y_offset == out_of_the_screen)
     {
         return;
     }
-    if (!m_sub_plots[h].x_is_in_plot(m_mouse_x) || !m_sub_plots[h].y_is_in_plot(m_mouse_y - y_offset))
+    if (!m_sub_plots[h].x_is_in_plot(m_mouse_x - x_offset) || !m_sub_plots[h].y_is_in_plot(m_mouse_y - y_offset))
     {
         return;
     }
-    double x = m_sub_plots[h].from_plot_x(m_mouse_x);
+    double x = m_sub_plots[h].from_plot_x(m_mouse_x - x_offset);
     double y = m_sub_plots[h].from_plot_y(m_mouse_y - y_offset);
     string text = "x : " + to_str(x) + ", y : " + to_str(y);
     Texture mouse_sprite { renderer, m_small_font.RenderUTF8_Blended(text, SDL_Color(0, 0, 0, 255)) };
@@ -738,8 +804,8 @@ void SubPlot::initialize()
     if (!m_window_defined)
         initialize_zoom_and_offset();
     m_bottom_margin = m_plotter.text_margin + 2 * m_small_font_advance;
-    m_x_label_margin = 0;//This has to have a value before determine_axis() is called, but we don't care exactly what
-    determine_axis(); // This is needed because it computes m_x_label_margin
+    m_x_label_margin = 0; // This has to have a value before determine_axis() is called, but we don't care exactly what
+    determine_axis();     // This is needed because it computes m_x_label_margin
 }
 
 void SubPlot::initialize_zoom_and_offset()
@@ -888,17 +954,48 @@ void Plotter::update_mouse_position()
 
 size_t Plotter::hovered_sub_plot() const
 {
+    if (m_stacking_direction == StackingDirection::Vertical)
+    {
+        int offset = 0;
+        for (size_t i = 0; i < m_sub_plots.size(); i++)
+        {
+            offset += m_sub_plots[i].height();
+            if (offset >= m_mouse_y)
+                return i;
+        }
+        return no_sub_plot_hovered;
+    }
+    else
+    {
+        int offset = 0;
+        for (size_t i = 0; i < m_sub_plots.size(); i++)
+        {
+            offset += m_sub_plots[i].width();
+            if (offset >= m_mouse_x)
+                return i;
+        }
+        return no_sub_plot_hovered;
+    }
+}
+
+int Plotter::base_x_of_hovered_subplot() const
+{
+    if (m_stacking_direction == StackingDirection::Vertical)
+        return 0;
     int offset = 0;
     for (size_t i = 0; i < m_sub_plots.size(); i++)
     {
-        offset += m_sub_plots[i].height();
-        if (offset >= m_mouse_y)
-            return i;
+        if (offset + m_sub_plots[i].width() >= m_mouse_x)
+            return offset;
+        offset += m_sub_plots[i].width();
     }
-    return no_sub_plot_hovered;
+    return out_of_the_screen;
 }
+
 int Plotter::base_y_of_hovered_subplot() const
 {
+    if (m_stacking_direction == StackingDirection::Horizontal)
+        return 0;
     int offset = 0;
     for (size_t i = 0; i < m_sub_plots.size(); i++)
     {
@@ -913,5 +1010,4 @@ void Plotter::add_info_line(SubPlot::InfoLine const& i)
 {
     m_infos.push_back(i);
 }
-
 }

@@ -47,6 +47,7 @@ int main()
     };
     plotter.add_function({ weierstrass_function, "Weierstrass function", default_color }, 1);
     plotter.plot();
+    plotter.set_stacking_direction(StackingDirection::Vertical);
     plotter.save("test");
     return 0;
 }

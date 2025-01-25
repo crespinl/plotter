@@ -254,6 +254,12 @@ private:
     static constexpr int sampling_number_of_points = 5'000;
 };
 
+enum class StackingDirection
+{
+    Horizontal,
+    Vertical
+};
+
 class Plotter
 {
 public:
@@ -268,6 +274,7 @@ public:
         , m_size_cursor(nullptr)
         , m_arrow_cursor(nullptr)
         , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
+        , m_stacking_direction(StackingDirection::Horizontal)
     {
         construct(title, x_title, y_title);
     }
@@ -277,6 +284,7 @@ public:
     void add_function(Function const& f, int n = 0);
     void set_window(double x, double y, double w, double h, int n = 0); // (x, y) are the coordinates of the top-left point
     SubPlot& add_sub_plot(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title);
+    void set_stacking_direction(StackingDirection d) { m_stacking_direction = d; }
 
 private:
     friend class SubPlot;
@@ -301,7 +309,10 @@ private:
     void update_mouse_position();
     size_t hovered_sub_plot() const;
     void add_info_line(SubPlot::InfoLine const& i);
+    int base_x_of_hovered_subplot() const;
     int base_y_of_hovered_subplot() const;
+    int width() const;
+    int height() const;
 
     bool m_running;
     SDL2pp::SDLTTF m_ttf;
@@ -318,6 +329,7 @@ private:
     int m_small_font_advance;
     std::vector<SubPlot::InfoLine> m_infos;
     std::vector<SubPlot> m_sub_plots;
+    StackingDirection m_stacking_direction;
 
     static constexpr int plot_info_margin = 10;
     static constexpr int info_margin = 5;
