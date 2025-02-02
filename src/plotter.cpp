@@ -572,12 +572,17 @@ double SubPlot::compute_grid_step(int min_nb, int max_nb, double range)
     return factor * pow(10., exponent);
 }
 
-void SubPlot::draw_point(double x, double y, Renderer& renderer)
+void SubPlot::draw_point(double x, double y, Renderer& renderer, PointType point_type)
 {
     int abscissa = to_plot_x<int>(x);
     int ordinate = to_plot_y<int>(y);
     if (x_is_in_plot(abscissa) && y_is_in_plot(ordinate))
-        renderer.FillRect(Rect::FromCorners(abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size));
+    {
+        if (point_type == PointType::Square)
+            renderer.FillRect(Rect::FromCorners(abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size));
+        else // if point_type == PointType::Circle
+            draw_circle(renderer, abscissa, ordinate, 2 * half_point_size);
+    }
 }
 
 double SubPlot::from_plot_x(int x) const
@@ -638,12 +643,12 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
             || (to_plot_y<int>(c.points[i].y) > top_margin + title_size() + m_height && to_plot_y<int>(c.points[i + 1].y) > top_margin + title_size() + m_height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
         if (c.display_points == DisplayPoints::Yes)
-            draw_point(c.points[i].x, c.points[i].y, renderer);
+            draw_point(c.points[i].x, c.points[i].y, renderer, c.point_type);
         if (c.display_lines == DisplayLines::Yes)
             draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into, textures_pool);
     }
     if (c.display_points == DisplayPoints::Yes)
-        draw_point(c.points.back().x, c.points.back().y, renderer);
+        draw_point(c.points.back().x, c.points.back().y, renderer, c.point_type);
     renderer.SetTarget(*m_texture);
 }
 
@@ -735,6 +740,39 @@ bool SubPlot::intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_
     }
 
     return true;
+}
+
+void SubPlot::draw_circle(SDL2pp::Renderer& renderer, int x, int y, int radius)
+{
+    // This is based on the Midpoint algorithm
+    int x_offset = 0;
+    int y_offset = radius;
+    int d = radius - 1;
+
+    while (y_offset >= x_offset)
+    {
+        renderer.DrawLine(x - y_offset, y + x_offset, x + y_offset, y + x_offset);
+        renderer.DrawLine(x - x_offset, y + y_offset, x + x_offset, y + y_offset);
+        renderer.DrawLine(x - x_offset, y - y_offset, x + x_offset, y - y_offset);
+        renderer.DrawLine(x - y_offset, y - x_offset, x + y_offset, y - x_offset);
+
+        if (d >= 2 * x_offset)
+        {
+            d -= 2 * x_offset + 1;
+            x_offset += 1;
+        }
+        else if (d < 2 * (radius - y_offset))
+        {
+            d += 2 * y_offset - 1;
+            y_offset -= 1;
+        }
+        else
+        {
+            d += 2 * (y_offset - x_offset - 1);
+            y_offset -= 1;
+            x_offset += 1;
+        }
+    }
 }
 
 void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& renderer, Texture& into, unordered_map<int, Texture>& textures_pool)

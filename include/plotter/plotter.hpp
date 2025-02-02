@@ -72,6 +72,12 @@ enum class DisplayLines : bool
     No = false
 };
 
+enum class PointType
+{
+    Square,
+    Circle,
+};
+
 struct Collection
 {
     std::vector<Coordinate> points;
@@ -79,6 +85,7 @@ struct Collection
     Color color;
     DisplayPoints display_points { DisplayPoints::Yes };
     DisplayLines display_lines { DisplayLines::No };
+    PointType point_type { PointType::Square };
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
 
@@ -188,7 +195,7 @@ private:
     void initialize(); // This has to be called each time before a plot
 
     void draw_axis(std::tuple<std::vector<Axis>, std::vector<Axis>> const& axis, SDL2pp::Renderer& renderer);
-    void draw_point(double x, double y, SDL2pp::Renderer& renderer); // Absolute coordinates
+    void draw_point(double x, double y, SDL2pp::Renderer& renderer, PointType point_type); // Absolute coordinates
     template<typename T>
     T to_plot_x(double x) const
     {
@@ -215,6 +222,7 @@ private:
     std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis();
     double static compute_grid_step(int min_nb, int max_nb, double range);
     bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
+    void static draw_circle(SDL2pp::Renderer& renderer, int x, int y, int radius);
 
     int title_size() const;
     int x_axis_name_size() const;
