@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2024 Louis Crespin
+Copyright (C) 2024-2025 Louis Crespin
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-SPDX itentifier : GPL-3.0-or-later
+SPDX identifier : GPL-3.0-or-later
 */
 #include <SDL2/SDL_image.h>
 #include <algorithm>
@@ -476,7 +476,7 @@ tuple<vector<SubPlot::Axis>, vector<SubPlot::Axis>> SubPlot::determine_axis()
     double rounded_x_min = round(x_min / x_step) * x_step;
     double rounded_y_min = round(y_min / y_step) * y_step;
 
-    size_t max_ordinate_lenght = 3;
+    size_t max_ordinate_length = 3;
 
     for (int i = 0; i < max_nb_horizontal_axis + 1; i++)
     {
@@ -484,16 +484,16 @@ tuple<vector<SubPlot::Axis>, vector<SubPlot::Axis>> SubPlot::determine_axis()
         int ordinate = to_plot_y<int>(f_ordinate);
         if (y_is_in_plot(ordinate))
         {
-            if (Plotter::to_str(f_ordinate).size() > max_ordinate_lenght)
-                max_ordinate_lenght = Plotter::to_str(f_ordinate).size();
+            if (Plotter::to_str(f_ordinate).size() > max_ordinate_length)
+                max_ordinate_length = Plotter::to_str(f_ordinate).size();
             x.push_back({ ordinate, f_ordinate, false });
         }
     }
 
-    // Update the horizontal margin according to label text lenght
+    // Update the horizontal margin according to label text length
     int old_x_label_margin = m_x_label_margin;
     int old_width = width();
-    m_x_label_margin = max_ordinate_lenght * m_plotter.m_small_font_advance + 2 * m_plotter.text_margin;
+    m_x_label_margin = max_ordinate_length * m_plotter.m_small_font_advance + 2 * m_plotter.text_margin;
     if (old_x_label_margin != m_x_label_margin)
         event_resize(old_width, height());
 
