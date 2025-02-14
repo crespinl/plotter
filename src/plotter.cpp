@@ -409,7 +409,8 @@ std::unique_ptr<SDL2pp::Texture> SubPlot::internal_plot(Renderer& renderer)
     renderer.SetDrawColor(0, 0, 0, 255);
     renderer.DrawRect(Rect { hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height }); // Draw the plot box
     Texture title_sprite { renderer, m_plotter.m_big_font.RenderUTF8_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
-    Plotter::center_sprite(renderer, title_sprite, width() / 2, (top_margin + title_size()) / 2);
+    m_title_height = title_sprite.GetHeight();
+    Plotter::center_sprite(renderer, title_sprite, hmargin + m_width / 2 + y_axis_name_size() + m_x_label_margin, (top_margin + title_size()) / 2);
     draw_axis_titles(renderer);
     draw_axis(m_axis, renderer);
     draw_content(renderer);
@@ -449,7 +450,7 @@ int SubPlot::y_axis_name_size() const
 }
 int SubPlot::title_size() const
 {
-    return 20; // TODO : have the exact value
+    return m_title_height;
 }
 
 tuple<vector<SubPlot::Axis>, vector<SubPlot::Axis>> SubPlot::determine_axis()

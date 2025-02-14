@@ -251,6 +251,7 @@ private:
     int m_small_font_advance;
     int m_x_label_margin;
     int m_bottom_margin;
+    int m_title_height { 20 };
 
     static constexpr int top_margin = 20;
     static constexpr int hmargin = 10;

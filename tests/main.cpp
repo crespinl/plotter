@@ -33,8 +33,8 @@ int main()
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", default_color, DisplayPoints::Yes, DisplayLines::Yes });
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
 
-    plotter.add_sub_plot("Test sub plot", "same x axis", "different y axis");
-    auto weierstrass_function = [](double x) -> double {
+    plotter.add_sub_plot("Test sub plot", "other x axis", "other y axis");
+    /*auto weierstrass_function = [](double x) -> double {
         double y = 0;
         for (int i = 0; i < 20; i++)
         {
@@ -44,7 +44,20 @@ int main()
         }
         return y;
     };
-    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color }, 1);
+    plotter.add_function({ weierstrass_function, "Weierstrass function", default_color }, 1);*/
+    vector<Coordinate> coordinates1;
+    vector<Coordinate> coordinates2;
+    vector<Coordinate> coordinates3;
+    size_t n = 10;
+    for (size_t i = 0; i < n; i++)
+    {
+        coordinates1.emplace_back(i, i * i);
+        coordinates2.emplace_back(n - i, i * i);
+        coordinates3.emplace_back(i, 10 * cos(i));
+    }
+    plotter.add_collection({ coordinates1, "First sequence of points", default_color }, 1);
+    plotter.add_collection({ coordinates2, "Second sequence of points", default_color, DisplayPoints::Yes, DisplayLines::No, PointType::Circle }, 1);
+    plotter.add_collection({ coordinates3, "Third sequence of points", default_color, DisplayPoints::Yes, DisplayLines::No, PointType::Cross }, 1);
     plotter.plot();
     plotter.set_stacking_direction(StackingDirection::Vertical);
     plotter.save("test");
