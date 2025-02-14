@@ -580,8 +580,10 @@ void SubPlot::draw_point(double x, double y, Renderer& renderer, PointType point
     {
         if (point_type == PointType::Square)
             renderer.FillRect(Rect::FromCorners(abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size));
-        else // if point_type == PointType::Circle
+        else if (point_type == PointType::Circle)
             draw_circle(renderer, abscissa, ordinate, 2 * half_point_size);
+        else // if (point_type == PointType::Cross)
+            draw_cross(renderer, abscissa, ordinate, 4 * half_point_size);
     }
 }
 
@@ -773,6 +775,12 @@ void SubPlot::draw_circle(SDL2pp::Renderer& renderer, int x, int y, int radius)
             x_offset += 1;
         }
     }
+}
+
+void SubPlot::draw_cross(SDL2pp::Renderer& renderer, int x, int y, int length)
+{
+    renderer.DrawLine(x + length / 2, y, x - length / 2, y);
+    renderer.DrawLine(x, y + length / 2, x, y - length / 2);
 }
 
 void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& renderer, Texture& into, unordered_map<int, Texture>& textures_pool)

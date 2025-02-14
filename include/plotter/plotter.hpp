@@ -76,6 +76,7 @@ enum class PointType
 {
     Square,
     Circle,
+    Cross,
 };
 
 struct Collection
@@ -223,6 +224,7 @@ private:
     double static compute_grid_step(int min_nb, int max_nb, double range);
     bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
     void static draw_circle(SDL2pp::Renderer& renderer, int x, int y, int radius);
+    void static draw_cross(SDL2pp::Renderer& renderer, int x, int y, int length);
 
     int title_size() const;
     int x_axis_name_size() const;
