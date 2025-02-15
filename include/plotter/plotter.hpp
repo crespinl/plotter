@@ -38,6 +38,8 @@ struct Coordinate
 {
     double x;
     double y;
+    double x_error {0.};
+    double y_error {0.};
 };
 
 struct Color
@@ -196,7 +198,7 @@ private:
     void initialize(); // This has to be called each time before a plot
 
     void draw_axis(std::tuple<std::vector<Axis>, std::vector<Axis>> const& axis, SDL2pp::Renderer& renderer);
-    void draw_point(double x, double y, SDL2pp::Renderer& renderer, PointType point_type); // Absolute coordinates
+    void draw_point(Coordinate c, SDL2pp::Renderer& renderer, PointType point_type); // Absolute coordinates
     template<typename T>
     T to_plot_x(double x) const
     {

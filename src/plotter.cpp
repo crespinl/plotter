@@ -573,10 +573,10 @@ double SubPlot::compute_grid_step(int min_nb, int max_nb, double range)
     return factor * pow(10., exponent);
 }
 
-void SubPlot::draw_point(double x, double y, Renderer& renderer, PointType point_type)
+void SubPlot::draw_point(Coordinate c, Renderer& renderer, PointType point_type)
 {
-    int abscissa = to_plot_x<int>(x);
-    int ordinate = to_plot_y<int>(y);
+    int abscissa = to_plot_x<int>(c.x);
+    int ordinate = to_plot_y<int>(c.y);
     if (x_is_in_plot(abscissa) && y_is_in_plot(ordinate))
     {
         if (point_type == PointType::Square)
@@ -585,6 +585,22 @@ void SubPlot::draw_point(double x, double y, Renderer& renderer, PointType point
             draw_circle(renderer, abscissa, ordinate, 2 * half_point_size);
         else // if (point_type == PointType::Cross)
             draw_cross(renderer, abscissa, ordinate, 4 * half_point_size);
+        if (c.x_error != 0.)
+        {
+            int x_min = to_plot_x<int>(c.x - (c.x_error) / 2);
+            int x_max = to_plot_x<int>(c.x + (c.x_error) / 2);
+            renderer.DrawLine(x_min, ordinate, x_max, ordinate);
+            renderer.DrawLine(x_min, ordinate - 2 * half_point_size, x_min, ordinate + 2 * half_point_size);
+            renderer.DrawLine(x_max, ordinate - 2 * half_point_size, x_max, ordinate + 2 * half_point_size);
+        }
+        if (c.y_error != 0.)
+        {
+            int y_min = to_plot_y<int>(c.y - (c.y_error) / 2);
+            int y_max = to_plot_y<int>(c.y + (c.y_error) / 2);
+            renderer.DrawLine(abscissa, y_max, abscissa, y_min);
+            renderer.DrawLine(abscissa - 2 * half_point_size, y_max, abscissa + 2 * half_point_size, y_max);
+            renderer.DrawLine(abscissa - 2 * half_point_size, y_min, abscissa + 2 * half_point_size, y_min);
+        }
     }
 }
 
@@ -646,12 +662,12 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
             || (to_plot_y<int>(c.points[i].y) > top_margin + title_size() + m_height && to_plot_y<int>(c.points[i + 1].y) > top_margin + title_size() + m_height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
         if (c.display_points == DisplayPoints::Yes)
-            draw_point(c.points[i].x, c.points[i].y, renderer, c.point_type);
+            draw_point(c.points[i], renderer, c.point_type);
         if (c.display_lines == DisplayLines::Yes)
             draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into, textures_pool);
     }
     if (c.display_points == DisplayPoints::Yes)
-        draw_point(c.points.back().x, c.points.back().y, renderer, c.point_type);
+        draw_point(c.points.back(), renderer, c.point_type);
     renderer.SetTarget(*m_texture);
 }
 

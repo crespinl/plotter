@@ -51,7 +51,7 @@ int main()
     size_t n = 10;
     for (size_t i = 0; i < n; i++)
     {
-        coordinates1.emplace_back(i, i * i);
+        coordinates1.emplace_back(i, i * i, 0.1 * i, 2 * i);
         coordinates2.emplace_back(n - i, i * i);
         coordinates3.emplace_back(i, 10 * cos(i));
     }
