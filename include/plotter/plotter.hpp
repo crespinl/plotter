@@ -81,15 +81,42 @@ enum class PointType
     Cross,
 };
 
+constexpr Color default_color = Color {};
+
 struct Collection
 {
     std::vector<Coordinate> points;
     std::string name;
     Color color;
-    DisplayPoints display_points { DisplayPoints::Yes };
-    DisplayLines display_lines { DisplayLines::No };
-    PointType point_type { PointType::Square };
+    DisplayPoints display_points;
+    DisplayLines display_lines;
+    PointType point_type;
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
+    Collection(std::vector<double> const& x, std::vector<double> const& y, std::string const& n, Color c = default_color, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square)
+        : name(n)
+        , color(c)
+        , display_points(dp)
+        , display_lines(dl)
+        , point_type(pt)
+    {
+        if (x.size() != y.size())
+        {
+            throw std::runtime_error("x and y must have the same size");
+        }
+        points.reserve(x.size());
+        for (size_t i = 0; i < x.size(); i++)
+        {
+            points.push_back({ x[i], y[i] });
+        }
+    }
+    Collection(std::vector<Coordinate> const& p, std::string const& n, Color c = default_color, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square)
+        : points(p)
+        , name(n)
+        , color(c)
+        , display_points(dp)
+        , display_lines(dl)
+        , point_type(pt)
+    { }
 };
 
 struct Function
@@ -99,8 +126,6 @@ struct Function
     Color color;
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
-
-constexpr Color default_color = Color {};
 
 class ColorGenerator
 {

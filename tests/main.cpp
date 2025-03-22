@@ -46,17 +46,19 @@ int main()
     };
     plotter.emplace_function<1>(weierstrass_function, "Weierstrass function", default_color);*/
     vector<Coordinate> coordinates1;
-    vector<Coordinate> coordinates2;
+    vector<double> coordinates2_x;
+    vector<double> coordinates2_y;
     vector<Coordinate> coordinates3;
     size_t n = 10;
     for (size_t i = 0; i < n; i++)
     {
         coordinates1.emplace_back(i, i * i, 0.1 * i, 2 * i);
-        coordinates2.emplace_back(n - i, i * i);
+        coordinates2_x.push_back(n - i);
+        coordinates2_y.push_back(i * i);
         coordinates3.emplace_back(i, 10 * cos(i));
     }
     plotter.add_collection({ coordinates1, "First sequence of points", default_color }, 1);
-    plotter.add_collection({ coordinates2, "Second sequence of points", default_color, DisplayPoints::Yes, DisplayLines::No, PointType::Circle }, 1);
+    plotter.emplace_collection<1>(coordinates2_x, coordinates2_y, "Second sequence of points", default_color, DisplayPoints::Yes, DisplayLines::No, PointType::Circle);
     plotter.emplace_collection<1>(coordinates3, "Third sequence of points", default_color, DisplayPoints::Yes, DisplayLines::No, PointType::Cross);
     plotter.plot();
     plotter.set_stacking_direction(StackingDirection::Vertical);
