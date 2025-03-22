@@ -38,8 +38,8 @@ struct Coordinate
 {
     double x;
     double y;
-    double x_error {0.};
-    double y_error {0.};
+    double x_error { 0. };
+    double y_error { 0. };
 };
 
 struct Color
@@ -161,7 +161,17 @@ public:
         , m_small_font_advance(font_advance)
     { }
     void add_collection(Collection const& c);
+    template<class... Args>
+    void emplace_collection(Args&&... args)
+    {
+        add_collection(Collection { std::forward<Args>(args)... });
+    }
     void add_function(Function const& f);
+    template<class... Args>
+    void emplace_function(Args&&... args)
+    {
+        add_function(Function { std::forward<Args>(args)... });
+    }
     void set_window(double x, double y, double w, double h); // (x, y) are the coordinates of the top-left point
     void set_orthonormal(Orthonormal o = Orthonormal::Yes) { m_orthonormal = o; }
 
@@ -294,7 +304,17 @@ public:
     bool plot();
     bool save(std::string const& name);
     void add_collection(Collection const& c, int n = 0);
+    template<int n = 0, class... Args>
+    void emplace_collection(Args&&... args)
+    {
+        add_collection(Collection { std::forward<Args>(args)... }, n);
+    }
     void add_function(Function const& f, int n = 0);
+    template<int n = 0, class... Args>
+    void emplace_function(Args&&... args)
+    {
+        add_function(Function { std::forward<Args>(args)... }, n);
+    }
     void set_window(double x, double y, double w, double h, int n = 0); // (x, y) are the coordinates of the top-left point
     SubPlot& add_sub_plot(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title);
     void set_stacking_direction(StackingDirection d) { m_stacking_direction = d; }
