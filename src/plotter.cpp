@@ -682,7 +682,7 @@ void SubPlot::plot_function(Function const& f, SDL2pp::Renderer& renderer, Textu
         double v = x_min + i * (x_max - x_min) / sampling_number_of_points;
         coordinates.push_back({ v, f.function(v) });
     }
-    plot_collection(Collection { coordinates, f.name, f.color, DisplayPoints::No, DisplayLines::Yes }, renderer, into);
+    plot_collection(Collection { coordinates, f.name, DisplayPoints::No, DisplayLines::Yes, PointType::Square, f.color }, renderer, into);
 }
 
 SubPlot::ScreenPoint SubPlot::to_point(Coordinate const& c) const

@@ -92,7 +92,7 @@ struct Collection
     DisplayLines display_lines;
     PointType point_type;
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
-    Collection(std::vector<double> const& x, std::vector<double> const& y, std::string const& n, Color c = default_color, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square)
+    Collection(std::vector<double> const& x, std::vector<double> const& y, std::string const& n, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square, Color c = default_color)
         : name(n)
         , color(c)
         , display_points(dp)
@@ -109,7 +109,7 @@ struct Collection
             points.push_back({ x[i], y[i] });
         }
     }
-    Collection(std::vector<Coordinate> const& p, std::string const& n, Color c = default_color, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square)
+    Collection(std::vector<Coordinate> const& p, std::string const& n, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square, Color c = default_color)
         : points(p)
         , name(n)
         , color(c)
@@ -123,7 +123,7 @@ struct Function
 {
     std::function<double(double)> function;
     std::string name;
-    Color color;
+    Color color { default_color };
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
 

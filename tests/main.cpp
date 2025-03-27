@@ -27,11 +27,11 @@ int main()
     Plotter plotter { "Test Plot", "x axis", "y axis" };
 
     plotter.set_window(-10, 10, 20, 20);
-    plotter.add_function({ [](double x) { return sin(x); }, "A sinus", default_color });
-    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes, PointType::Circle });
-    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, -8 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes });
-    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", default_color, DisplayPoints::Yes, DisplayLines::Yes });
-    plotter.emplace_collection(vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::Yes);
+    plotter.add_function({ [](double x) { return sin(x); }, "A sinus" });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", DisplayPoints::Yes, DisplayLines::Yes, PointType::Circle });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, -8 } }, "A beautiful curve", DisplayPoints::Yes, DisplayLines::Yes });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", DisplayPoints::Yes, DisplayLines::Yes });
+    plotter.emplace_collection(vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", DisplayPoints::Yes, DisplayLines::Yes);
 
     plotter.add_sub_plot("Test sub plot", "other x axis", "other y axis");
     /*auto weierstrass_function = [](double x) -> double {
@@ -57,9 +57,9 @@ int main()
         coordinates2_y.push_back(i * i);
         coordinates3.emplace_back(i, 10 * cos(i));
     }
-    plotter.add_collection({ coordinates1, "First sequence of points", default_color }, 1);
-    plotter.emplace_collection<1>(coordinates2_x, coordinates2_y, "Second sequence of points", default_color, DisplayPoints::Yes, DisplayLines::No, PointType::Circle);
-    plotter.emplace_collection<1>(coordinates3, "Third sequence of points", default_color, DisplayPoints::Yes, DisplayLines::No, PointType::Cross);
+    plotter.add_collection({ coordinates1, "First sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Square, default_color }, 1);
+    plotter.emplace_collection<1>(coordinates2_x, coordinates2_y, "Second sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Circle);
+    plotter.emplace_collection<1>(coordinates3, "Third sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Cross);
     plotter.plot();
     plotter.set_stacking_direction(StackingDirection::Vertical);
     plotter.save("test");
