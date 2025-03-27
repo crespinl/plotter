@@ -19,6 +19,7 @@ SPDX identifier : GPL-3.0-or-later
 #pragma once
 #include <SDL2/SDL.h>
 #include <SDL2pp/SDL2pp.hh>
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -126,14 +127,20 @@ struct Function
     Color color { default_color };
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
+enum class ColorPalette : uint8_t
+{
+    Default = 0,
+    Pastel = 1,
+    Fire = 2,
+    Ice = 3,
+};
 
 class ColorGenerator
 {
 public:
-    ColorGenerator();
+    ColorGenerator(ColorPalette p);
     Color get_color();
-    static constexpr int nb_colors = 10;
-    static constexpr Color colors[nb_colors] {
+    static constexpr std::array<Color, 10> colors_default {
         Color { 0, 72, 186 },    // Absolute zero
         Color { 219, 45, 67 },   // Alizarin
         Color { 123, 182, 97 },  // Bud green
@@ -144,10 +151,31 @@ public:
         Color { 75, 54, 33 },    // Café noir
         Color { 255, 239, 0 },   // Canary yellow
         Color { 209, 190, 168 }  // Dark vanilla
-    };
-    // Source : https://en.wikipedia.org/wiki/List_of_colors_(compact)
+    }; // Source : https://en.wikipedia.org/wiki/List_of_colors_(compact)
+    static constexpr std::array<Color, 5> colors_pastel {
+        Color { 255, 204, 153 }, // Peach orange
+        Color { 255, 153, 204 }, // Himalayan balsam
+        Color { 204, 153, 255 }, // Lilàs
+        Color { 153, 204, 255 }, // Apocyan
+        Color { 204, 255, 204 }  // Distilled moss
+    }; // Source : https://colorswall.com/fr/palette/239046
+    static constexpr std::array<Color, 5> colors_fire {
+        Color { 155, 41, 72 },
+        Color { 255, 114, 81 },
+        Color { 223, 131, 70 },
+        Color { 255, 205, 116 },
+        Color { 255, 237, 191 },
+    }; // Adapted from https://www.color-hex.com/color-palette/1499
+    static constexpr std::array<Color, 4> colors_ice {
+        Color { 214, 228, 232 },
+        Color { 120, 166, 180 },
+        Color { 41, 109, 121 },
+        Color { 22, 81, 109 },
+    }; // Source : https://www.color-hex.com/color-palette/85246
+
 private:
     int m_index;
+    ColorPalette m_palette;
 };
 
 enum class Orthonormal : bool
@@ -312,7 +340,7 @@ class Plotter
 {
 public:
     friend class SubPlot;
-    Plotter(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title)
+    Plotter(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title, ColorPalette p = ColorPalette::Default)
         : m_running(false)
         , m_big_font_ops(SDL2pp::RWops::FromConstMem(notosans_ttf, notosans_ttf_len))
         , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
@@ -321,6 +349,7 @@ public:
         , m_subplot_mouse_selected(-1)
         , m_size_cursor(nullptr)
         , m_arrow_cursor(nullptr)
+        , m_color_generator(p)
         , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
         , m_stacking_direction(StackingDirection::Horizontal)
     {

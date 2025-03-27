@@ -24,7 +24,7 @@ using namespace plotter;
 
 int main()
 {
-    Plotter plotter { "Test Plot", "x axis", "y axis" };
+    Plotter plotter { "Test Plot", "x axis", "y axis", ColorPalette::Default };
 
     plotter.set_window(-10, 10, 20, 20);
     plotter.add_function({ [](double x) { return sin(x); }, "A sinus" });
@@ -63,5 +63,6 @@ int main()
     plotter.plot();
     plotter.set_stacking_direction(StackingDirection::Vertical);
     plotter.save("test");
+
     return 0;
 }

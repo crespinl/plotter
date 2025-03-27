@@ -342,14 +342,35 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     renderer.Copy(mouse_sprite, NullOpt, { info_box_hmargin, offset });
 }
 
-ColorGenerator::ColorGenerator()
+ColorGenerator::ColorGenerator(ColorPalette p)
     : m_index(0)
+    , m_palette(p)
 { }
 
 plotter::Color ColorGenerator::get_color()
 {
-    plotter::Color c = colors[m_index];
-    m_index = (m_index + 1) % nb_colors;
+    plotter::Color c = { 0, 0, 0 };
+    size_t max = 1;
+    switch (m_palette)
+    {
+    case ColorPalette::Default:
+        c = colors_default[m_index];
+        max = colors_default.size();
+        break;
+    case ColorPalette::Pastel:
+        c = colors_pastel[m_index];
+        max = colors_pastel.size();
+        break;
+    case ColorPalette::Fire:
+        c = colors_fire[m_index];
+        max = colors_fire.size();
+        break;
+    case ColorPalette::Ice:
+        c = colors_ice[m_index];
+        max = colors_ice.size();
+        break;
+    }
+    m_index = (m_index + 1) % max;
     return c;
 }
 
