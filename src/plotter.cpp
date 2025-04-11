@@ -673,8 +673,33 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
     if (c.points.size() == 0)
         return;
     renderer.SetDrawColor(c.get_color());
-    unordered_map<int, Texture> textures_pool; // OPTIMIZATION : since draw_line rarely needs a lot of Textures of different size, store them
+
+    // This builds the maximal segment that can be drawn
+    int const max_segment_width = ceil(sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height));
+    Texture total_segment { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 2 * max_segment_width, 4 * line_width_half };
+    total_segment.SetBlendMode(SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(total_segment.Get(), SDL_ScaleModeLinear);
+    renderer.SetTarget(total_segment);
+    if (c.line_style == LineStyle::Solid)
+    {
+        renderer.Clear();
+    }
+    else if (c.line_style == LineStyle::Dashed)
+    {
+        renderer.SetDrawColor(255, 255, 255, 0);
+        renderer.FillRect(Rect::FromCorners(0, 0, 2 * max_segment_width, 4 * line_width_half));
+        renderer.SetDrawColor(c.get_color());
+        int w = 0;
+        int dash_len = 15;
+        while (w < 2 * max_segment_width)
+        {
+            renderer.FillRect(Rect::FromCorners(w, 0, w + dash_len, 4 * line_width_half));
+            w += 2 * dash_len;
+        }
+    }
     renderer.SetTarget(into);
+
+    size_t lenght_drawn = 0;
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
         if ((to_plot_x<int>(c.points[i].x) < hmargin + y_axis_name_size() + m_x_label_margin && to_plot_x<int>(c.points[i + 1].x) < hmargin + y_axis_name_size() + m_x_label_margin)
@@ -685,7 +710,7 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
         if (c.display_points == DisplayPoints::Yes)
             draw_point(c.points[i], renderer, c.point_type);
         if (c.display_lines == DisplayLines::Yes)
-            draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into, textures_pool);
+            draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into, lenght_drawn, total_segment);
     }
     if (c.display_points == DisplayPoints::Yes)
         draw_point(c.points.back(), renderer, c.point_type);
@@ -703,7 +728,7 @@ void SubPlot::plot_function(Function const& f, SDL2pp::Renderer& renderer, Textu
         double v = x_min + i * (x_max - x_min) / sampling_number_of_points;
         coordinates.push_back({ v, f.function(v) });
     }
-    plot_collection(Collection { coordinates, f.name, DisplayPoints::No, DisplayLines::Yes, PointType::Square, f.color }, renderer, into);
+    plot_collection(Collection { coordinates, f.name, DisplayPoints::No, DisplayLines::Yes, PointType::Square, f.line_style, f.color }, renderer, into);
 }
 
 SubPlot::ScreenPoint SubPlot::to_point(Coordinate const& c) const
@@ -821,7 +846,7 @@ void SubPlot::draw_cross(SDL2pp::Renderer& renderer, int x, int y, int length)
     renderer.DrawLine(x, y + length / 2, x, y - length / 2);
 }
 
-void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& renderer, Texture& into, unordered_map<int, Texture>& textures_pool)
+void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& renderer, Texture& into, size_t& lenght_drawn, SDL2pp::Texture& total_segment)
 {
     int64_t x1 = p1.x;
     int64_t x2 = p2.x;
@@ -840,18 +865,13 @@ void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& 
         w = static_cast<int>(w_candidate);
     }
     double angle = atan2(y2 - y1, x2 - x1);
-    auto texture = textures_pool.find(w);
-    if (texture == textures_pool.end()) // Makes sure the pool contains the needed size
-    {
-        Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, 4 * line_width_half };
-        renderer.SetTarget(sprite);
-        renderer.Clear();
-        renderer.SetTarget(into);
-        texture = textures_pool.insert({ w, move(sprite) }).first;
-    }
-    Point dst_point { static_cast<int>(x1 + static_cast<int>(2. * line_width_half * sin(angle))), static_cast<int>(y1 + static_cast<int>(-2. * line_width_half * cos(angle))) }; // offset due to rotation
-    angle *= 360 / (2 * numbers::pi_v<double>);                                                                                                                                  // to degree
-    renderer.Copy(texture->second, NullOpt, dst_point, angle, Point { 0, 0 });
+    int x_offset = static_cast<int>(2. * line_width_half * sin(angle)); // offset due to rotation
+    int y_offset = static_cast<int>(-2. * line_width_half * cos(angle));
+    Point dst_point { x1 + x_offset, y1 + y_offset };
+    angle *= 360 / (2 * numbers::pi_v<double>); // to degree
+    int segment_offset = lenght_drawn % (int)ceil(max_w);
+    renderer.Copy(total_segment, Rect { segment_offset, 0, w, 4 * line_width_half }, dst_point, angle, Point { 0, 0 });
+    lenght_drawn += w - line_width_half;
 }
 
 void SubPlot::add_collection(Collection const& c)

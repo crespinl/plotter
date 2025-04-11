@@ -84,6 +84,12 @@ enum class PointType
 
 constexpr Color default_color = Color {};
 
+enum class LineStyle
+{
+    Solid,
+    Dashed,
+};
+
 struct Collection
 {
     std::vector<Coordinate> points;
@@ -92,13 +98,15 @@ struct Collection
     DisplayPoints display_points;
     DisplayLines display_lines;
     PointType point_type;
+    LineStyle line_style;
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
-    Collection(std::vector<double> const& x, std::vector<double> const& y, std::string const& n, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square, Color c = default_color)
+    Collection(std::vector<double> const& x, std::vector<double> const& y, std::string const& n, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square, LineStyle ls = LineStyle::Solid, Color c = default_color)
         : name(n)
         , color(c)
         , display_points(dp)
         , display_lines(dl)
         , point_type(pt)
+        , line_style(ls)
     {
         if (x.size() != y.size())
         {
@@ -110,13 +118,14 @@ struct Collection
             points.push_back({ x[i], y[i] });
         }
     }
-    Collection(std::vector<Coordinate> const& p, std::string const& n, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square, Color c = default_color)
+    Collection(std::vector<Coordinate> const& p, std::string const& n, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square, LineStyle ls = LineStyle::Solid, Color c = default_color)
         : points(p)
         , name(n)
         , color(c)
         , display_points(dp)
         , display_lines(dl)
         , point_type(pt)
+        , line_style(ls)
     { }
 };
 
@@ -124,6 +133,7 @@ struct Function
 {
     std::function<double(double)> function;
     std::string name;
+    LineStyle line_style { LineStyle::Solid };
     Color color { default_color };
     SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
@@ -282,7 +292,7 @@ private:
     void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     void plot_function(Function const& f, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
     ScreenPoint to_point(Coordinate const& c) const;
-    void draw_line(ScreenPoint const& p1, ScreenPoint const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, std::unordered_map<int, SDL2pp::Texture>& textures_pool);
+    void draw_line(ScreenPoint const& p1, ScreenPoint const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, size_t& lenght_drawn, SDL2pp::Texture& total_segment);
     void initialize_zoom_and_offset();
     void draw_content(SDL2pp::Renderer& renderer);
     std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis();
