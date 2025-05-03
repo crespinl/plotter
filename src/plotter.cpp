@@ -548,13 +548,13 @@ void SubPlot::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, Renderer&
         {
             renderer.SetDrawColor(120, 120, 120, 255);
             draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_half, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_half));
+            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_unit, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_unit));
         }
         else
         {
             renderer.SetDrawColor(180, 180, 180, 255);
             draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_half, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_half));
+            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_unit, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_unit));
         }
     }
 
@@ -564,13 +564,13 @@ void SubPlot::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, Renderer&
         {
             renderer.SetDrawColor(120, 120, 120, 255);
             draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin + title_size(), e.plot_coordinate + line_width_half, top_margin + title_size() + m_height));
+            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_unit, top_margin + title_size(), e.plot_coordinate + line_width_unit, top_margin + title_size() + m_height));
         }
         else
         {
             renderer.SetDrawColor(180, 180, 180, 255);
             draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_half, top_margin + title_size(), e.plot_coordinate + line_width_half, top_margin + title_size() + m_height));
+            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_unit, top_margin + title_size(), e.plot_coordinate + line_width_unit, top_margin + title_size() + m_height));
         }
     }
 }
@@ -672,28 +672,39 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
 {
     if (c.points.size() == 0)
         return;
-    renderer.SetDrawColor(c.get_color());
+
+    SDL2pp::Color normal = c.get_color();
+    SDL2pp::Color transparent = { normal.r, normal.g, normal.b, 120 }; // Used for home-made antialiasing
 
     // This builds the maximal segment that can be drawn
     int const max_segment_width = ceil(sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height));
-    Texture total_segment { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 2 * max_segment_width, 4 * line_width_half };
+    Texture total_segment { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 2 * max_segment_width, 5 * line_width_unit };
     total_segment.SetBlendMode(SDL_BLENDMODE_BLEND);
-    SDL_SetTextureScaleMode(total_segment.Get(), SDL_ScaleModeLinear);
     renderer.SetTarget(total_segment);
+    // Creates a transparent background to help antialiasing
+    renderer.SetDrawColor(255, 255, 255, 0);
+    renderer.FillRect(Rect::FromCorners(0, 0, 2 * max_segment_width, 5 * line_width_unit));
     if (c.line_style == LineStyle::Solid)
     {
-        renderer.Clear();
+        renderer.SetDrawColor(transparent);
+        renderer.DrawLine(0, line_width_unit, 2 * max_segment_width, line_width_unit);
+        renderer.DrawLine(0, 3 * line_width_unit, 2 * max_segment_width, 3 * line_width_unit);
+
+        renderer.SetDrawColor(normal);
+        renderer.DrawLine(0, 2 * line_width_unit, 2 * max_segment_width, 2 * line_width_unit);
     }
     else if (c.line_style == LineStyle::Dashed)
     {
-        renderer.SetDrawColor(255, 255, 255, 0);
-        renderer.FillRect(Rect::FromCorners(0, 0, 2 * max_segment_width, 4 * line_width_half));
-        renderer.SetDrawColor(c.get_color());
         int w = 0;
         int dash_len = 15;
         while (w < 2 * max_segment_width)
         {
-            renderer.FillRect(Rect::FromCorners(w, 0, w + dash_len, 4 * line_width_half));
+            renderer.SetDrawColor(transparent);
+            renderer.DrawLine(w, line_width_unit, w + dash_len, line_width_unit);
+            renderer.DrawLine(w, 3 * line_width_unit, w + dash_len, 3 * line_width_unit);
+
+            renderer.SetDrawColor(normal);
+            renderer.DrawLine(w, 2 * line_width_unit, w + dash_len, 2 * line_width_unit);
             w += 2 * dash_len;
         }
     }
@@ -865,13 +876,13 @@ void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& 
         w = static_cast<int>(w_candidate);
     }
     double angle = atan2(y2 - y1, x2 - x1);
-    int x_offset = static_cast<int>(2. * line_width_half * sin(angle)); // offset due to rotation
-    int y_offset = static_cast<int>(-2. * line_width_half * cos(angle));
+    int x_offset = static_cast<int>(2. * line_width_unit * sin(angle)); // offset due to rotation
+    int y_offset = static_cast<int>(-2. * line_width_unit * cos(angle));
     Point dst_point { x1 + x_offset, y1 + y_offset };
     angle *= 360 / (2 * numbers::pi_v<double>); // to degree
     int segment_offset = lenght_drawn % (int)ceil(max_w);
-    renderer.Copy(total_segment, Rect { segment_offset, 0, w, 4 * line_width_half }, dst_point, angle, Point { 0, 0 });
-    lenght_drawn += w - line_width_half;
+    renderer.Copy(total_segment, Rect { segment_offset, 0, w, 5 * line_width_unit }, dst_point, angle, Point { 0, 0 });
+    lenght_drawn += w - line_width_unit;
 }
 
 void SubPlot::add_collection(Collection const& c)
@@ -989,7 +1000,7 @@ void SubPlot::event_zoom(float mouse_wheel, int mouse_x, int mouse_y)
     double back_x_zoom = m_x_zoom;
     m_x_zoom *= pow(zoom_factor, mouse_wheel);
     m_y_zoom = m_x_zoom * m_y_x_ratio;
-    if (from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin) == from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin + 2 * line_width_half) || from_plot_y(top_margin + title_size()) == from_plot_y(top_margin + title_size() + 2 * line_width_half))
+    if (from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin) == from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin + 2 * line_width_unit) || from_plot_y(top_margin + title_size()) == from_plot_y(top_margin + title_size() + 2 * line_width_unit))
     {
         // We were too far and can't distinguish two points close to each other anymore
         m_x_zoom = back_x_zoom;

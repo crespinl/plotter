@@ -330,7 +330,7 @@ private:
 
     static constexpr int top_margin = 20;
     static constexpr int hmargin = 10;
-    static constexpr int line_width_half = 1;
+    static constexpr int line_width_unit = 1;
     static constexpr int half_point_size = 4;
     static constexpr double zoom_factor = 1.3;
     static constexpr int plot_min_width = 160;
