@@ -678,7 +678,7 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
         return;
 
     SDL2pp::Color normal = c.get_color();
-    SDL2pp::Color transparent = { normal.r, normal.g, normal.b, 120 }; // Used for home-made antialiasing
+    SDL2pp::Color transparent = { normal.r, normal.g, normal.b, 190 }; // Used for home-made antialiasing
 
     // This builds the maximal segment that can be drawn
     int const max_segment_width = ceil(sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height));

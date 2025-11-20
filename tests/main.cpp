@@ -33,8 +33,8 @@ int main()
     plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { -10, 8 } }, "A beautiful curve with a looooooooooooooong name", DisplayPoints::Yes, DisplayLines::Yes });
     plotter.emplace_collection(vector<Coordinate> { { 0, 0 }, { 20, 16 } }, "A beautiful curve", DisplayPoints::Yes, DisplayLines::Yes);
 
-    plotter.add_sub_plot("Test sub plot", "other x axis", "other y axis");
-    /*auto weierstrass_function = [](double x) -> double {
+    plotter.add_sub_plot("Weierstrass function", "other x axis", "other y axis");
+    auto weierstrass_function = [](double x) -> double {
         double y = 0;
         for (int i = 0; i < 20; i++)
         {
@@ -44,7 +44,8 @@ int main()
         }
         return y;
     };
-    plotter.emplace_function<1>(weierstrass_function, "Weierstrass function", default_color);*/
+    plotter.emplace_function<1>(weierstrass_function, "Weierstrass function");
+    plotter.add_sub_plot("Thirs sub plot", "x axis", "y axis");
     vector<Coordinate> coordinates1;
     vector<double> coordinates2_x;
     vector<double> coordinates2_y;
@@ -57,9 +58,9 @@ int main()
         coordinates2_y.push_back(i * i);
         coordinates3.emplace_back(i, 10 * cos(i));
     }
-    plotter.add_collection({ coordinates1, "First sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Square, LineStyle::Solid, default_color }, 1);
-    plotter.emplace_collection<1>(coordinates2_x, coordinates2_y, "Second sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Circle);
-    plotter.emplace_collection<1>(coordinates3, "Third sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Cross);
+    plotter.add_collection({ coordinates1, "First sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Square, LineStyle::Solid, default_color }, 2);
+    plotter.emplace_collection<2>(coordinates2_x, coordinates2_y, "Second sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Circle);
+    plotter.emplace_collection<2>(coordinates3, "Third sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Cross);
     plotter.plot();
     plotter.set_stacking_direction(StackingDirection::Vertical);
     plotter.save("test");
