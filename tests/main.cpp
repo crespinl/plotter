@@ -45,7 +45,7 @@ int main()
         return y;
     };
     plotter.emplace_function<1>(weierstrass_function, "Weierstrass function");
-    plotter.add_sub_plot("Thirs sub plot", "x axis", "y axis");
+    plotter.add_sub_plot("Third sub plot", "x axis", "y axis");
     vector<Coordinate> coordinates1;
     vector<double> coordinates2_x;
     vector<double> coordinates2_y;

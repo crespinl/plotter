@@ -72,10 +72,12 @@ int main()
         float v = (float)i / 10.;
         coordinates.push_back({ v, sin(v) });
     }
-    plotter.add_collection({ coordinates, "A sinus", default_color, DisplayPoints::No, DisplayLines::Yes });
-    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful curve", default_color, DisplayPoints::Yes, DisplayLines::No });
+    plotter.add_collection({ coordinates, "A sinus", DisplayPoints::No, DisplayLines::Yes });
+    plotter.add_collection({ vector<Coordinate> { { 0, 0 }, { 10, -8 }, { -10, -8 }, { -10, 8 }, { 10, 8 }, { 0, 0 } }, "A beautiful set", DisplayPoints::Yes, DisplayLines::No });
     return !plotter.plot();
 }
 ```
 
 Build the CMake project and enjoy !
+
+For further usage, please read [the documentation](./doc.md)
