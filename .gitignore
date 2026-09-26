@@ -18,3 +18,4 @@ testplotter
 tests/CMakeFiles/**
 *.png
 plotter-cppcheck-build-dir/**
+compile_commands.json
