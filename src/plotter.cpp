@@ -47,7 +47,8 @@ sf::Text make_text(sf::Font const& font, string const& str, unsigned int size)
 void draw_centered(sf::RenderTarget& target, sf::Text& text, float x, float y)
 {
     sf::FloatRect const bounds = text.getLocalBounds();
-    text.setOrigin(bounds.position + bounds.size / 2.f);
+    sf::Vector2f const center = bounds.position + bounds.size / 2.f;
+    text.setOrigin({ round(center.x), round(center.y) }); // A fractional origin would put the glyphs between pixels and blur them
     text.setPosition({ round(x), round(y) });
     target.draw(text);
 }
