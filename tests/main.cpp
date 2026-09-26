@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 SPDX identifier : GPL-3.0-or-later
 */
+#include <cmath>
 #include <iostream>
 #include <plotter/plotter.hpp>
 

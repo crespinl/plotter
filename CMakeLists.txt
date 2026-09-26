@@ -15,24 +15,33 @@
 #
 # SPDX itentifier : GPL-3.0-or-later
 
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.28)
 
 project(plotter VERSION 1.0.0)
 
-find_package(SDL2 REQUIRED)
-
-set(SDL2PP_WITH_IMAGE ON)
-set(SDL2PP_WITH_TTF ON)
-add_subdirectory(libSDL2pp)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-#find_package(SDL2pp REQUIRED)
-
-set(LIBRARY_OUTPUT_PATH lib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -fdiagnostics-color=always")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 set(CMAKE_BUILD_TYPE "Release")
+
+# SFML is built as a static library and linked privately into plotter, so users of plotter don't need it
+include(FetchContent)
+set(BUILD_SHARED_LIBS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
+set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(SFML
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG 3.0.2
+    GIT_SHALLOW ON
+    EXCLUDE_FROM_ALL
+    SYSTEM
+)
+FetchContent_MakeAvailable(SFML)
+
+set(LIBRARY_OUTPUT_PATH lib)
 
 set(SRCS
     src/plotter.cpp
@@ -51,15 +60,16 @@ add_library(plotter SHARED ${SRCS} ${HEADERS})
 target_include_directories(plotter PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/plotter>
-    ${SDL2_INCLUDE_DIRS}
 )
 
-target_link_libraries(plotter PUBLIC SDL2::SDL2 SDL2pp::SDL2pp)
+target_link_libraries(plotter PRIVATE SFML::Graphics SFML::Window)
+# Don't export the symbols of the static SFML, so that it can't clash with another SFML used by the application
+target_link_options(plotter PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>)
 
 
 include(GNUInstallDirs)
 
-install(TARGETS SDL2pp plotter
+install(TARGETS plotter
     EXPORT plotterTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

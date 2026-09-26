@@ -4,22 +4,23 @@ plotter is a plotting library for C++, which aims to provide easy to use functio
 
 ## Installation
 
-### Install SDL2pp
+### Dependencies
 
-First install basic dependencies :
+plotter uses [SFML](https://www.sfml-dev.org/), which is downloaded and built automatically by CMake and embedded in the library : you don't have to install it.
 
-- A compiler
+You only need :
+
+- A C++20 compiler
 - make
-- cmake
+- cmake (3.28 or newer)
 - ninja
+- the system libraries needed to build SFML (windowing, OpenGL and fonts)
 
 On Debian-based systems, run :
 
 ```sh
-sudo apt install build-essentials ninja cmake
+sudo apt install build-essential ninja-build cmake libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev libfreetype-dev
 ```
-
-Follow instruction at : <https://github.com/libSDL2pp/libSDL2pp?tab=readme-ov-file#building>, install the library system-wide.
 
 ### Linux
 
@@ -45,7 +46,7 @@ Create a basic test program in a separate directory :
 In a CMakeLists.txt file :
 
 ```cmake
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.28)
 
 project(test)
 find_package(plotter REQUIRED)
@@ -57,6 +58,7 @@ target_link_libraries(test plotter::plotter)
 In a main.cpp file :
 
 ```cpp
+#include <cmath>
 #include <vector>
 #include <plotter/plotter.hpp>
 

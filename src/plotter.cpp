@@ -16,21 +16,133 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 SPDX identifier : GPL-3.0-or-later
 */
-#include <SDL2/SDL_image.h>
+#include <SFML/Graphics.hpp>
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <iomanip>
-#include <limits>
+#include <iostream>
+#include <numbers>
 #include <plotter/plotter.hpp>
 #include <sstream>
-#include <thread>
 
 namespace plotter
 {
 
 using namespace std;
-using namespace SDL2pp;
+
+namespace
+{
+sf::Color to_sf(plotter::Color const& c)
+{
+    return sf::Color(c.red, c.green, c.blue);
+}
+
+sf::Text make_text(sf::Font const& font, string const& str, unsigned int size)
+{
+    sf::Text text(font, sf::String::fromUtf8(str.begin(), str.end()), size);
+    text.setFillColor(sf::Color::Black);
+    return text;
+}
+
+void draw_centered(sf::RenderTarget& target, sf::Text& text, float x, float y)
+{
+    sf::FloatRect const bounds = text.getLocalBounds();
+    text.setOrigin(bounds.position + bounds.size / 2.f);
+    text.setPosition({ round(x), round(y) });
+    target.draw(text);
+}
+
+// Maps the area of the target starting at (x, y) of size (w, h) to the coordinates starting at (world_x, world_y).
+// Everything drawn outside of this area is clipped.
+void set_view(sf::RenderTarget& target, float x, float y, float w, float h, float world_x, float world_y)
+{
+    sf::Vector2f const size(target.getSize());
+    sf::View view(sf::FloatRect({ world_x, world_y }, { w, h }));
+    view.setViewport(sf::FloatRect({ x / size.x, y / size.y }, { w / size.x, h / size.y }));
+    target.setView(view);
+}
+
+// Coordinates are in pixels : the rectangle covers the pixels from (x, y) to (x + w - 1, y + h - 1)
+void add_rect(sf::VertexArray& triangles, float x, float y, float w, float h, sf::Color const& color)
+{
+    sf::Vector2f const a { x, y };
+    sf::Vector2f const b { x + w, y };
+    sf::Vector2f const c { x + w, y + h };
+    sf::Vector2f const d { x, y + h };
+    for (sf::Vector2f const& p : { a, b, c, a, c, d })
+        triangles.append({ p, color });
+}
+
+// Inclusive corners
+void add_rect_from_corners(sf::VertexArray& triangles, int x1, int y1, int x2, int y2, sf::Color const& color)
+{
+    add_rect(triangles, x1, y1, x2 - x1 + 1, y2 - y1 + 1, color);
+}
+
+// One pixel wide line, between the centers of the pixels (x1, y1) and (x2, y2)
+void add_line(sf::VertexArray& lines, int x1, int y1, int x2, int y2, sf::Color const& color)
+{
+    lines.append({ { x1 + .5f, y1 + .5f }, color });
+    lines.append({ { x2 + .5f, y2 + .5f }, color });
+}
+
+void add_circle(sf::VertexArray& triangles, int x, int y, float radius, sf::Color const& color)
+{
+    constexpr int nb_sides = 24;
+    sf::Vector2f const center { x + .5f, y + .5f };
+    for (int i = 0; i < nb_sides; i++)
+    {
+        float const a1 = 2.f * numbers::pi_v<float> * i / nb_sides;
+        float const a2 = 2.f * numbers::pi_v<float> * (i + 1) / nb_sides;
+        triangles.append({ center, color });
+        triangles.append({ center + radius * sf::Vector2f { cos(a1), sin(a1) }, color });
+        triangles.append({ center + radius * sf::Vector2f { cos(a2), sin(a2) }, color });
+    }
+}
+
+void add_cross(sf::VertexArray& lines, int x, int y, int length, sf::Color const& color)
+{
+    add_line(lines, x + length / 2, y, x - length / 2, y, color);
+    add_line(lines, x, y + length / 2, x, y - length / 2, color);
+}
+
+// A segment of the given thickness, with square caps so that consecutive segments join nicely
+void add_thick_segment(sf::VertexArray& triangles, sf::Vector2f p1, sf::Vector2f p2, float thickness, sf::Color const& color)
+{
+    sf::Vector2f const d = p2 - p1;
+    float const length = d.length();
+    if (length == 0.f)
+        return;
+    sf::Vector2f const u = d / length * (thickness / 2.f);
+    sf::Vector2f const n { -u.y, u.x };
+    sf::Vector2f const offset { .5f, .5f }; // Center of the pixels
+    sf::Vector2f const a = p1 - u + n + offset;
+    sf::Vector2f const b = p2 + u + n + offset;
+    sf::Vector2f const c = p2 + u - n + offset;
+    sf::Vector2f const e = p1 - u - n + offset;
+    for (sf::Vector2f const& p : { a, b, c, a, c, e })
+        triangles.append({ p, color });
+}
+}
+
+Plotter::Plotter(string const& title, optional<string> x_title, optional<string> y_title, ColorPalette p)
+    : m_big_font(make_unique<sf::Font>(notosans_ttf, notosans_ttf_len))
+    , m_small_font(make_unique<sf::Font>(firacode_ttf, firacode_ttf_len))
+    , m_mouse_x(out_of_the_screen)
+    , m_mouse_y(out_of_the_screen)
+    , m_subplot_mouse_selected(no_sub_plot_hovered)
+    , m_color_generator(p)
+    , m_small_font_advance(m_small_font->getGlyph(U' ', small_font_size, false).advance)
+    , m_stacking_direction(StackingDirection::Horizontal)
+{
+    if (m_small_font->getGlyph(U'i', small_font_size, false).advance != m_small_font->getGlyph(U'W', small_font_size, false).advance)
+    {
+        throw runtime_error("The small font has to be fixed width");
+    }
+    m_sub_plots.push_back(SubPlot { *this, title, x_title, y_title, m_small_font_advance });
+}
+
+Plotter::~Plotter() = default;
 
 bool Plotter::plot()
 {
@@ -46,9 +158,6 @@ bool Plotter::internal_plot(bool save, std::string const& name)
 {
     try
     {
-        SDL sdl(SDL_INIT_VIDEO);
-        SDLImage sdl_image(IMG_INIT_PNG);
-
         for_each(m_sub_plots.begin(), m_sub_plots.end(), [](SubPlot& s) { s.initialize(); });
 
         int h = 0;
@@ -70,52 +179,62 @@ bool Plotter::internal_plot(bool save, std::string const& name)
             min_h = m_sub_plots.front().min_height();
         }
 
-        Window window("Plotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h + plot_info_margin + info_height(), (save ? SDL_WINDOW_HIDDEN : SDL_WINDOW_SHOWN) | SDL_WINDOW_RESIZABLE);
+        sf::Vector2u const size(w, h + plot_info_margin + info_height());
+        sf::ContextSettings settings;
+        settings.antiAliasingLevel = antialiasing_level;
 
-        window.SetMinimumSize(min_w, min_h + plot_info_margin + info_height());
-        Renderer renderer(window, -1, SDL_RENDERER_ACCELERATED);
-
-        m_running = true;
         m_subplot_mouse_selected = no_sub_plot_hovered;
-        m_arrow_cursor = SDL_GetCursor();
-        m_size_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-        SDL_Event event;
-        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-        while (m_running)
+        m_mouse_x = out_of_the_screen;
+        m_mouse_y = out_of_the_screen;
+
+        if (save)
         {
-            auto start = chrono::steady_clock::now();
-            while (SDL_PollEvent(&event))
+            sf::RenderTexture texture(size, settings);
+            render(texture);
+            texture.display();
+            return texture.getTexture().copyToImage().saveToFile(name + ".png");
+        }
+
+        sf::RenderWindow window(sf::VideoMode(size), "Plotter", sf::Style::Default, sf::State::Windowed, settings);
+        window.setMinimumSize(sf::Vector2u(min_w, min_h + plot_info_margin + info_height()));
+        window.setFramerateLimit(frame_rate);
+        auto const arrow_cursor = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
+        auto const size_cursor = sf::Cursor::createFromSystem(sf::Cursor::Type::SizeAll);
+
+        while (window.isOpen())
+        {
+            while (auto const event = window.pollEvent())
             {
-                if (event.type == SDL_QUIT)
+                if (event->is<sf::Event::Closed>())
                 {
-                    m_running = false;
+                    window.close();
                 }
-                else if (event.type == SDL_KEYDOWN)
+                else if (auto const* key = event->getIf<sf::Event::KeyPressed>())
                 {
-                    switch (event.key.keysym.sym)
+                    switch (key->code)
                     {
-                    case SDLK_RIGHT:
+                    case sf::Keyboard::Key::Right:
                     {
                         for_each(m_sub_plots.begin(), m_sub_plots.end(), [](SubPlot& s) {
                             s.event_x_move(-10);
                         });
                         break;
                     }
-                    case SDLK_LEFT:
+                    case sf::Keyboard::Key::Left:
                     {
                         for_each(m_sub_plots.begin(), m_sub_plots.end(), [](SubPlot& s) {
                             s.event_x_move(10);
                         });
                         break;
                     }
-                    case SDLK_UP:
+                    case sf::Keyboard::Key::Up:
                     {
                         for_each(m_sub_plots.begin(), m_sub_plots.end(), [](SubPlot& s) {
                             s.event_y_move(-10);
                         });
                         break;
                     }
-                    case SDLK_DOWN:
+                    case sf::Keyboard::Key::Down:
                     {
                         for_each(m_sub_plots.begin(), m_sub_plots.end(), [](SubPlot& s) {
                             s.event_y_move(10);
@@ -125,117 +244,90 @@ bool Plotter::internal_plot(bool save, std::string const& name)
                     default:
                         break;
                     }
-                    update_mouse_position();
                 }
-                else if (event.type == SDL_MOUSEWHEEL)
+                else if (auto const* wheel = event->getIf<sf::Event::MouseWheelScrolled>())
                 {
-                    update_mouse_position();
+                    if (wheel->wheel != sf::Mouse::Wheel::Vertical)
+                        continue;
+                    m_mouse_x = wheel->position.x;
+                    m_mouse_y = wheel->position.y;
                     size_t hovered = hovered_sub_plot();
                     if (hovered != no_sub_plot_hovered)
-                        m_sub_plots[hovered].event_zoom(event.wheel.preciseY, m_mouse_x - base_x_of_hovered_subplot(), m_mouse_y - base_y_of_hovered_subplot());
+                        m_sub_plots[hovered].event_zoom(wheel->delta, m_mouse_x - base_x_of_hovered_subplot(), m_mouse_y - base_y_of_hovered_subplot());
                 }
-                else if (event.type == SDL_MOUSEMOTION)
+                else if (auto const* move = event->getIf<sf::Event::MouseMoved>())
                 {
                     if (m_subplot_mouse_selected != no_sub_plot_hovered)
                     {
-                        m_sub_plots[m_subplot_mouse_selected].event_x_move(event.motion.xrel);
-                        m_sub_plots[m_subplot_mouse_selected].event_y_move(-event.motion.yrel);
+                        m_sub_plots[m_subplot_mouse_selected].event_x_move(move->position.x - m_mouse_x);
+                        m_sub_plots[m_subplot_mouse_selected].event_y_move(-(move->position.y - m_mouse_y));
                     }
-                    update_mouse_position();
+                    m_mouse_x = move->position.x;
+                    m_mouse_y = move->position.y;
                 }
-                else if (event.type == SDL_MOUSEBUTTONDOWN)
+                else if (auto const* press = event->getIf<sf::Event::MouseButtonPressed>())
                 {
-                    update_mouse_position();
+                    m_mouse_x = press->position.x;
+                    m_mouse_y = press->position.y;
                     m_subplot_mouse_selected = hovered_sub_plot();
-                    SDL_SetCursor(m_size_cursor);
+                    if (size_cursor)
+                        window.setMouseCursor(*size_cursor);
                 }
-                else if (event.type == SDL_MOUSEBUTTONUP)
+                else if (event->is<sf::Event::MouseButtonReleased>())
                 {
                     m_subplot_mouse_selected = no_sub_plot_hovered;
-                    SDL_SetCursor(m_arrow_cursor);
+                    if (arrow_cursor)
+                        window.setMouseCursor(*arrow_cursor);
                 }
-                else if (event.type == SDL_WINDOWEVENT)
+                else if (auto const* resize = event->getIf<sf::Event::Resized>())
                 {
-                    switch (event.window.event)
-                    {
-                    case SDL_WINDOWEVENT_SIZE_CHANGED:
-                    {
-                        for_each(m_sub_plots.begin(), m_sub_plots.end(), [&](SubPlot& s) {
-                            // TODO : if step is less than m_sub_plots.size()
-                            if (m_stacking_direction == StackingDirection::Vertical)
-                                s.event_resize(event.window.data1, (event.window.data2 - plot_info_margin - info_height()) / m_sub_plots.size());
-                            else
-                                s.event_resize(event.window.data1 / m_sub_plots.size(), event.window.data2 - plot_info_margin - info_height());
-                        });
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
-                    }
+                    int const new_w = resize->size.x;
+                    int const new_h = resize->size.y;
+                    for_each(m_sub_plots.begin(), m_sub_plots.end(), [&](SubPlot& s) {
+                        // TODO : if step is less than m_sub_plots.size()
+                        if (m_stacking_direction == StackingDirection::Vertical)
+                            s.event_resize(new_w, (new_h - plot_info_margin - info_height()) / m_sub_plots.size());
+                        else
+                            s.event_resize(new_w / m_sub_plots.size(), new_h - plot_info_margin - info_height());
+                    });
                 }
             }
 
-            renderer.SetDrawColor(255, 255, 255, 255); // Clear the screen
-            renderer.Clear();
-
-            renderer.SetDrawColor(0, 0, 0, 255);
-            draw_info_box(renderer);
-
-            if (m_stacking_direction == StackingDirection::Vertical)
-            {
-                int offset = 0;
-                for (auto& e : m_sub_plots)
-                {
-                    auto texture = e.internal_plot(renderer);
-                    renderer.SetTarget();
-                    renderer.Copy(*texture, NullOpt, Point { 0, offset });
-                    offset += e.height();
-                }
-            }
-            else
-            {
-                int offset = 0;
-                for (auto& e : m_sub_plots)
-                {
-                    auto texture = e.internal_plot(renderer);
-                    renderer.SetTarget();
-                    renderer.Copy(*texture, NullOpt, Point { offset, 0 });
-                    offset += e.width();
-                }
-            }
-
-            renderer.Present();
-
-            if (save)
-            {
-                save_img(window, renderer, name);
-                m_running = false;
-            }
-            else
-            {
-                // Frame limiter
-                auto end = chrono::steady_clock::now();
-                std::chrono::duration<double> diff = end - start;
-                int duration_ms = round(diff.count() * 1000);
-                int to_wait = max(40 - duration_ms, 0); // Make the whole iteration take at least 1/25 s
-                this_thread::sleep_for(chrono::milliseconds(to_wait));
-            }
+            if (!window.isOpen())
+                break;
+            render(window);
+            window.display();
         }
     }
     catch (exception const& e)
     {
         cerr << e.what() << endl;
+        return false;
     }
-    SDL_SetCursor(m_arrow_cursor);
-    SDL_FreeCursor(m_size_cursor);
     return true;
 }
 
-void Plotter::center_sprite(Renderer& renderer, Texture& texture, int x, int y)
+void Plotter::render(sf::RenderTarget& target)
 {
-    renderer.Copy(texture, NullOpt, { x - texture.GetWidth() / 2, y - texture.GetHeight() / 2 });
+    target.clear(sf::Color::White);
+    sf::Vector2f const size(target.getSize());
+    set_view(target, 0, 0, size.x, size.y, 0, 0);
+    draw_info_box(target);
+
+    int offset = 0;
+    for (auto& e : m_sub_plots)
+    {
+        if (m_stacking_direction == StackingDirection::Vertical)
+        {
+            e.internal_plot(target, 0, offset);
+            offset += e.height();
+        }
+        else
+        {
+            e.internal_plot(target, offset, 0);
+            offset += e.width();
+        }
+    }
 }
 
 std::string Plotter::to_str(double nb, int nb_digits)
@@ -246,12 +338,17 @@ std::string Plotter::to_str(double nb, int nb_digits)
     return out.str();
 }
 
+int Plotter::small_font_height() const
+{
+    return static_cast<int>(lround(m_small_font->getLineSpacing(small_font_size)));
+}
+
 int Plotter::info_height() const
 {
     int infos_lines = 1 + m_infos.size() / 2; // The space for mouse coordinates + functions and collections
     if (m_infos.size() % 2 != 0)
         infos_lines += 1; // Add one more line if the number is not even
-    return (infos_lines + 1) * info_margin + infos_lines * m_small_font.GetHeight();
+    return (infos_lines + 1) * info_margin + infos_lines * small_font_height();
 }
 
 int Plotter::width() const
@@ -282,7 +379,7 @@ int Plotter::height() const
     return h + plot_info_margin + info_height();
 }
 
-void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
+void Plotter::draw_info_box(sf::RenderTarget& target)
 {
     int offset = plot_info_margin + info_margin;
     if (m_stacking_direction == StackingDirection::Vertical)
@@ -296,30 +393,32 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
         offset = m_sub_plots.front().height();
     }
 
+    int const font_height = small_font_height();
     int const w = width() - 2 * info_box_hmargin;
+    sf::VertexArray squares(sf::PrimitiveType::Triangles);
     size_t i = 0;
     for (; i < m_infos.size(); i++)
     {
         int hpos = (i % 2 == 0) ? 0 : w / 2;
-        renderer.SetDrawColor(m_infos[i].color);
-        renderer.FillRect(Rect { info_box_hmargin + hpos, offset, m_small_font.GetHeight(), m_small_font.GetHeight() });
+        add_rect(squares, info_box_hmargin + hpos, offset, font_height, font_height, to_sf(m_infos[i].color));
         string text = m_infos[i].name;
-        if (m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)w / 2) // make sure it will not take too much space
+        if (font_height + info_margin + (text.size() + 1) * m_small_font_advance > (size_t)w / 2) // make sure it will not take too much space
         {
-            int extra_chars = ((m_small_font.GetHeight() + info_margin + (text.size() + 1) * m_small_font_advance) - w / 2) / m_small_font_advance;
+            int extra_chars = ((font_height + info_margin + (text.size() + 1) * m_small_font_advance) - w / 2) / m_small_font_advance;
             text.resize(text.size() - extra_chars - 4);
             text += "...";
         }
-        Texture name = { renderer, m_small_font.RenderUTF8_Blended(text, SDL_Color(0, 0, 0, 255)) };
-        renderer.Copy(name, NullOpt, { info_box_hmargin + hpos + m_small_font.GetHeight() + info_margin, offset });
-        offset += (i % 2 == 0) ? 0 : info_margin + m_small_font.GetHeight();
+        sf::Text name = make_text(*m_small_font, text, small_font_size);
+        name.setPosition(sf::Vector2f(info_box_hmargin + hpos + font_height + info_margin, offset));
+        target.draw(name);
+        offset += (i % 2 == 0) ? 0 : info_margin + font_height;
     }
+    target.draw(squares);
     if (i % 2 == 1)
     {
-        offset += info_margin + m_small_font.GetHeight();
+        offset += info_margin + font_height;
     }
 
-    update_mouse_position();
     size_t h = hovered_sub_plot();
     if (h == no_sub_plot_hovered)
     {
@@ -337,9 +436,9 @@ void Plotter::draw_info_box(SDL2pp::Renderer& renderer)
     }
     double x = m_sub_plots[h].from_plot_x(m_mouse_x - x_offset);
     double y = m_sub_plots[h].from_plot_y(m_mouse_y - y_offset);
-    string text = "x : " + to_str(x) + ", y : " + to_str(y);
-    Texture mouse_sprite { renderer, m_small_font.RenderUTF8_Blended(text, SDL_Color(0, 0, 0, 255)) };
-    renderer.Copy(mouse_sprite, NullOpt, { info_box_hmargin, offset });
+    sf::Text mouse_text = make_text(*m_small_font, "x : " + to_str(x) + ", y : " + to_str(y), small_font_size);
+    mouse_text.setPosition(sf::Vector2f(info_box_hmargin, offset));
+    target.draw(mouse_text);
 }
 
 ColorGenerator::ColorGenerator(ColorPalette p)
@@ -394,71 +493,45 @@ SubPlot& Plotter::add_sub_plot(string const& title, optional<string> x_title, op
     return m_sub_plots.back();
 }
 
-void Plotter::save_img(Window const& window, Renderer& renderer, string name)
+void SubPlot::internal_plot(sf::RenderTarget& target, int x, int y)
 {
-    Surface s { SDL_PIXELFORMAT_RGBA32, window.GetWidth(), window.GetHeight(), 32, R_MASK, G_MASK, B_MASK, A_MASK };
-    {
-        auto l = s.Lock();
-        renderer.ReadPixels(NullOpt, SDL_PIXELFORMAT_RGBA32, l.GetPixels(), l.GetPitch());
-    }
-    name += ".png";
-    IMG_SavePNG(s.Get(), name.c_str());
-}
-
-void Plotter::construct(string const& title, optional<string> x_title, optional<string> y_title)
-{
-    m_sub_plots.push_back(SubPlot { *this, title, x_title, y_title, m_small_font_advance });
-    if (!m_small_font.IsFixedWidth())
-    {
-        throw runtime_error("The small font has to be fixed width");
-    }
-}
-
-std::unique_ptr<SDL2pp::Texture> SubPlot::internal_plot(Renderer& renderer)
-{
-    m_texture = make_unique<Texture>(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, width(), height());
-    renderer.SetTarget(*m_texture);
-
     if (m_dirty_axis)
     {
         m_axis = determine_axis();
         m_dirty_axis = false;
     }
 
-    renderer.SetDrawColor(255, 255, 255, 255); // Clear the screen
-    renderer.Clear();
-    renderer.SetDrawColor(0, 0, 0, 255);
-    renderer.DrawRect(Rect { hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height }); // Draw the plot box
-    Texture title_sprite { renderer, m_plotter.m_big_font.RenderUTF8_Blended(m_title, SDL_Color(0, 0, 0, 255)) };
-    if (m_title_height != title_sprite.GetHeight())
-    {
-        m_title_height = title_sprite.GetHeight();
-        m_dirty_axis = true;
-    }
-    Plotter::center_sprite(renderer, title_sprite, hmargin + m_width / 2 + y_axis_name_size() + m_x_label_margin, (top_margin + title_size()) / 2);
-    draw_axis_titles(renderer);
-    draw_axis(m_axis, renderer);
-    draw_content(renderer);
-    return move(m_texture);
+    set_view(target, x, y, width(), height(), 0, 0);
+
+    sf::RectangleShape box(sf::Vector2f(m_width, m_height)); // Draw the plot box
+    box.setPosition(sf::Vector2f(hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size()));
+    box.setFillColor(sf::Color::Transparent);
+    box.setOutlineColor(sf::Color::Black);
+    box.setOutlineThickness(-1.f);
+    target.draw(box);
+
+    sf::Text title = make_text(*m_plotter.m_big_font, m_title, m_plotter.big_font_size);
+    draw_centered(target, title, hmargin + m_width / 2 + y_axis_name_size() + m_x_label_margin, (top_margin + title_size()) / 2);
+    draw_axis_titles(target);
+    draw_axis(m_axis, target);
+    draw_content(target, x, y);
 }
 
-void SubPlot::draw_content(SDL2pp::Renderer& renderer)
+void SubPlot::draw_content(sf::RenderTarget& target, int x, int y)
 {
-    Texture sprite { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, width() - hmargin, top_margin + title_size() + m_height };
-    sprite.SetBlendMode(SDL_BLENDMODE_BLEND);
-    renderer.SetTarget(sprite);
-    renderer.SetDrawColor(0, 0, 0, 0);
-    renderer.Clear();
-    renderer.SetTarget(*m_texture);
+    if (m_width <= 0 || m_height <= 0)
+        return;
+    int const box_x = hmargin + y_axis_name_size() + m_x_label_margin;
+    int const box_y = top_margin + title_size();
+    set_view(target, x + box_x, y + box_y, m_width, m_height, box_x, box_y); // Clip everything to the plot box
     for (auto const& e : m_collections)
     {
-        plot_collection(e, renderer, sprite);
+        plot_collection(e, target);
     }
     for (auto const& e : m_functions)
     {
-        plot_function(e, renderer, sprite);
+        plot_function(e, target);
     }
-    renderer.Copy(sprite, Rect { hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height }, { hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size() });
 }
 
 int SubPlot::x_axis_name_size() const
@@ -544,39 +617,23 @@ tuple<vector<SubPlot::Axis>, vector<SubPlot::Axis>> SubPlot::determine_axis()
     return { x, y };
 }
 
-void SubPlot::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, Renderer& renderer)
+void SubPlot::draw_axis(tuple<vector<Axis>, vector<Axis>> const& axis, sf::RenderTarget& target)
 {
+    sf::Color const main_color(120, 120, 120);
+    sf::Color const secondary_color(180, 180, 180);
+    sf::VertexArray lines(sf::PrimitiveType::Triangles);
     for (auto& e : get<0>(axis))
     {
-        if (e.is_main)
-        {
-            renderer.SetDrawColor(120, 120, 120, 255);
-            draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_unit, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_unit));
-        }
-        else
-        {
-            renderer.SetDrawColor(180, 180, 180, 255);
-            draw_horizontal_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_unit, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_unit));
-        }
+        draw_horizontal_line_number(e.coordinate, e.plot_coordinate, target);
+        add_rect_from_corners(lines, hmargin + y_axis_name_size() + m_x_label_margin, e.plot_coordinate - line_width_unit, hmargin + y_axis_name_size() + m_x_label_margin + m_width, e.plot_coordinate + line_width_unit, e.is_main ? main_color : secondary_color);
     }
 
     for (auto& e : get<1>(axis))
     {
-        if (e.is_main)
-        {
-            renderer.SetDrawColor(120, 120, 120, 255);
-            draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_unit, top_margin + title_size(), e.plot_coordinate + line_width_unit, top_margin + title_size() + m_height));
-        }
-        else
-        {
-            renderer.SetDrawColor(180, 180, 180, 255);
-            draw_vertical_line_number(e.coordinate, e.plot_coordinate, renderer);
-            renderer.FillRect(Rect::FromCorners(e.plot_coordinate - line_width_unit, top_margin + title_size(), e.plot_coordinate + line_width_unit, top_margin + title_size() + m_height));
-        }
+        draw_vertical_line_number(e.coordinate, e.plot_coordinate, target);
+        add_rect_from_corners(lines, e.plot_coordinate - line_width_unit, top_margin + title_size(), e.plot_coordinate + line_width_unit, top_margin + title_size() + m_height, e.is_main ? main_color : secondary_color);
     }
+    target.draw(lines);
 }
 
 double SubPlot::compute_grid_step(int min_nb, int max_nb, double range)
@@ -598,33 +655,33 @@ double SubPlot::compute_grid_step(int min_nb, int max_nb, double range)
     return factor * pow(10., exponent);
 }
 
-void SubPlot::draw_point(Coordinate c, Renderer& renderer, PointType point_type)
+void SubPlot::draw_point(Coordinate c, PointType point_type, sf::Color const& color, sf::VertexArray& triangles, sf::VertexArray& lines)
 {
     int abscissa = to_plot_x<int>(c.x);
     int ordinate = to_plot_y<int>(c.y);
     if (x_is_in_plot(abscissa) && y_is_in_plot(ordinate))
     {
         if (point_type == PointType::Square)
-            renderer.FillRect(Rect::FromCorners(abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size));
+            add_rect_from_corners(triangles, abscissa - half_point_size, ordinate - half_point_size, abscissa + half_point_size, ordinate + half_point_size, color);
         else if (point_type == PointType::Circle)
-            draw_circle(renderer, abscissa, ordinate, 2 * half_point_size);
+            add_circle(triangles, abscissa, ordinate, 2 * half_point_size, color);
         else // if (point_type == PointType::Cross)
-            draw_cross(renderer, abscissa, ordinate, 4 * half_point_size);
+            add_cross(lines, abscissa, ordinate, 4 * half_point_size, color);
         if (c.x_error != 0.)
         {
             int x_min = to_plot_x<int>(c.x - (c.x_error) / 2);
             int x_max = to_plot_x<int>(c.x + (c.x_error) / 2);
-            renderer.DrawLine(x_min, ordinate, x_max, ordinate);
-            renderer.DrawLine(x_min, ordinate - 2 * half_point_size, x_min, ordinate + 2 * half_point_size);
-            renderer.DrawLine(x_max, ordinate - 2 * half_point_size, x_max, ordinate + 2 * half_point_size);
+            add_line(lines, x_min, ordinate, x_max, ordinate, color);
+            add_line(lines, x_min, ordinate - 2 * half_point_size, x_min, ordinate + 2 * half_point_size, color);
+            add_line(lines, x_max, ordinate - 2 * half_point_size, x_max, ordinate + 2 * half_point_size, color);
         }
         if (c.y_error != 0.)
         {
             int y_min = to_plot_y<int>(c.y - (c.y_error) / 2);
             int y_max = to_plot_y<int>(c.y + (c.y_error) / 2);
-            renderer.DrawLine(abscissa, y_max, abscissa, y_min);
-            renderer.DrawLine(abscissa - 2 * half_point_size, y_max, abscissa + 2 * half_point_size, y_max);
-            renderer.DrawLine(abscissa - 2 * half_point_size, y_min, abscissa + 2 * half_point_size, y_min);
+            add_line(lines, abscissa, y_max, abscissa, y_min, color);
+            add_line(lines, abscissa - 2 * half_point_size, y_max, abscissa + 2 * half_point_size, y_max, color);
+            add_line(lines, abscissa - 2 * half_point_size, y_min, abscissa + 2 * half_point_size, y_min, color);
         }
     }
 }
@@ -646,75 +703,44 @@ bool SubPlot::y_is_in_plot(int y) const
     return y > top_margin + title_size() && y < top_margin + title_size() + m_height;
 }
 
-void SubPlot::draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer)
+void SubPlot::draw_vertical_line_number(double nb, int x, sf::RenderTarget& target)
 {
-    Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(Plotter::to_str(nb), SDL_Color(0, 0, 0, 255)) };
-    Plotter::center_sprite(renderer, sprite, x, top_margin + title_size() + m_height + m_bottom_margin / 2);
+    sf::Text text = make_text(*m_plotter.m_small_font, Plotter::to_str(nb), m_plotter.small_font_size);
+    draw_centered(target, text, x, top_margin + title_size() + m_height + m_bottom_margin / 2);
 }
 
-void SubPlot::draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer)
+void SubPlot::draw_horizontal_line_number(double nb, int y, sf::RenderTarget& target)
 {
-    Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(Plotter::to_str(nb), SDL_Color(0, 0, 0, 255)) };
-    Plotter::center_sprite(renderer, sprite, hmargin + y_axis_name_size() + m_x_label_margin / 2, y);
+    sf::Text text = make_text(*m_plotter.m_small_font, Plotter::to_str(nb), m_plotter.small_font_size);
+    draw_centered(target, text, hmargin + y_axis_name_size() + m_x_label_margin / 2, y);
 }
 
-void SubPlot::draw_axis_titles(SDL2pp::Renderer& renderer)
+void SubPlot::draw_axis_titles(sf::RenderTarget& target)
 {
     if (m_y_title)
     {
-        Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(*m_y_title, SDL_Color(0, 0, 0, 255)) };
-        renderer.Copy(sprite, NullOpt, { hmargin + m_plotter.text_margin, m_height / 2 + sprite.GetWidth() / 2 + top_margin + title_size() }, 270, Point { 0, 0 });
+        sf::Text text = make_text(*m_plotter.m_small_font, *m_y_title, m_plotter.small_font_size);
+        text.setRotation(sf::degrees(-90.f));
+        draw_centered(target, text, hmargin + y_axis_name_size() / 2, top_margin + title_size() + m_height / 2);
     }
     if (m_x_title)
     {
-        Texture sprite { renderer, m_plotter.m_small_font.RenderUTF8_Blended(*m_x_title, SDL_Color(0, 0, 0, 255)) };
-        Plotter::center_sprite(renderer, sprite, hmargin + y_axis_name_size() + m_x_label_margin + m_width / 2, top_margin + title_size() + m_height + m_bottom_margin + x_axis_name_size() / 2);
+        sf::Text text = make_text(*m_plotter.m_small_font, *m_x_title, m_plotter.small_font_size);
+        draw_centered(target, text, hmargin + y_axis_name_size() + m_x_label_margin + m_width / 2, top_margin + title_size() + m_height + m_bottom_margin + x_axis_name_size() / 2);
     }
 }
 
-void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, Texture& into)
+void SubPlot::plot_collection(Collection const& c, sf::RenderTarget& target)
 {
     if (c.points.size() == 0)
         return;
 
-    SDL2pp::Color normal = c.get_color();
-    SDL2pp::Color transparent = { normal.r, normal.g, normal.b, 190 }; // Used for home-made antialiasing
+    sf::Color const color = to_sf(c.color);
+    sf::VertexArray line_triangles(sf::PrimitiveType::Triangles);
+    sf::VertexArray point_triangles(sf::PrimitiveType::Triangles);
+    sf::VertexArray point_lines(sf::PrimitiveType::Lines);
 
-    // This builds the maximal segment that can be drawn
-    int const max_segment_width = ceil(sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height));
-    Texture total_segment { renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 2 * max_segment_width, 5 * line_width_unit };
-    total_segment.SetBlendMode(SDL_BLENDMODE_BLEND);
-    renderer.SetTarget(total_segment);
-    // Creates a transparent background to help antialiasing
-    renderer.SetDrawColor(255, 255, 255, 0);
-    renderer.FillRect(Rect::FromCorners(0, 0, 2 * max_segment_width, 5 * line_width_unit));
-    if (c.line_style == LineStyle::Solid)
-    {
-        renderer.SetDrawColor(transparent);
-        renderer.DrawLine(0, line_width_unit, 2 * max_segment_width, line_width_unit);
-        renderer.DrawLine(0, 3 * line_width_unit, 2 * max_segment_width, 3 * line_width_unit);
-
-        renderer.SetDrawColor(normal);
-        renderer.DrawLine(0, 2 * line_width_unit, 2 * max_segment_width, 2 * line_width_unit);
-    }
-    else if (c.line_style == LineStyle::Dashed)
-    {
-        int w = 0;
-        int dash_len = 15;
-        while (w < 2 * max_segment_width)
-        {
-            renderer.SetDrawColor(transparent);
-            renderer.DrawLine(w, line_width_unit, w + dash_len, line_width_unit);
-            renderer.DrawLine(w, 3 * line_width_unit, w + dash_len, 3 * line_width_unit);
-
-            renderer.SetDrawColor(normal);
-            renderer.DrawLine(w, 2 * line_width_unit, w + dash_len, 2 * line_width_unit);
-            w += 2 * dash_len;
-        }
-    }
-    renderer.SetTarget(into);
-
-    size_t lenght_drawn = 0;
+    double length_drawn = 0.;
     for (size_t i = 0; i < c.points.size() - 1; i++)
     {
         if ((to_plot_x<int>(c.points[i].x) < hmargin + y_axis_name_size() + m_x_label_margin && to_plot_x<int>(c.points[i + 1].x) < hmargin + y_axis_name_size() + m_x_label_margin)
@@ -723,16 +749,19 @@ void SubPlot::plot_collection(Collection const& c, SDL2pp::Renderer& renderer, T
             || (to_plot_y<int>(c.points[i].y) > top_margin + title_size() + m_height && to_plot_y<int>(c.points[i + 1].y) > top_margin + title_size() + m_height))
             continue; // Both points are outside of the screen, and on the same side : there is nothing to draw
         if (c.display_points == DisplayPoints::Yes)
-            draw_point(c.points[i], renderer, c.point_type);
+            draw_point(c.points[i], c.point_type, color, point_triangles, point_lines);
         if (c.display_lines == DisplayLines::Yes)
-            draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), renderer, into, lenght_drawn, total_segment);
+            draw_line(to_point(c.points[i]), to_point(c.points[i + 1]), c.line_style, color, line_triangles, length_drawn);
     }
     if (c.display_points == DisplayPoints::Yes)
-        draw_point(c.points.back(), renderer, c.point_type);
-    renderer.SetTarget(*m_texture);
+        draw_point(c.points.back(), c.point_type, color, point_triangles, point_lines);
+
+    target.draw(line_triangles);
+    target.draw(point_triangles);
+    target.draw(point_lines);
 }
 
-void SubPlot::plot_function(Function const& f, SDL2pp::Renderer& renderer, Texture& into)
+void SubPlot::plot_function(Function const& f, sf::RenderTarget& target)
 {
     double x_min = from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin);
     double x_max = from_plot_x(hmargin + y_axis_name_size() + m_x_label_margin + m_width);
@@ -743,7 +772,7 @@ void SubPlot::plot_function(Function const& f, SDL2pp::Renderer& renderer, Textu
         double v = x_min + i * (x_max - x_min) / sampling_number_of_points;
         coordinates.push_back({ v, f.function(v) });
     }
-    plot_collection(Collection { coordinates, f.name, DisplayPoints::No, DisplayLines::Yes, PointType::Square, f.line_style, f.color }, renderer, into);
+    plot_collection(Collection { coordinates, f.name, DisplayPoints::No, DisplayLines::Yes, PointType::Square, f.line_style, f.color }, target);
 }
 
 SubPlot::ScreenPoint SubPlot::to_point(Coordinate const& c) const
@@ -753,7 +782,6 @@ SubPlot::ScreenPoint SubPlot::to_point(Coordinate const& c) const
 
 bool SubPlot::intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2)
 {
-    // This function exists in SDL, but not with int64_t
     auto clip = [](int64_t p, int64_t q, int64_t& t0_num, int64_t& t0_den, int64_t& t1_num, int64_t& t1_den) { // Liang-Barsky algorithm
         if (p == 0)
         {
@@ -822,71 +850,36 @@ bool SubPlot::intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_
     return true;
 }
 
-void SubPlot::draw_circle(SDL2pp::Renderer& renderer, int x, int y, int radius)
-{
-    // This is based on the Midpoint algorithm
-    int x_offset = 0;
-    int y_offset = radius;
-    int d = radius - 1;
-
-    while (y_offset >= x_offset)
-    {
-        renderer.DrawLine(x - y_offset, y + x_offset, x + y_offset, y + x_offset);
-        renderer.DrawLine(x - x_offset, y + y_offset, x + x_offset, y + y_offset);
-        renderer.DrawLine(x - x_offset, y - y_offset, x + x_offset, y - y_offset);
-        renderer.DrawLine(x - y_offset, y - x_offset, x + y_offset, y - x_offset);
-
-        if (d >= 2 * x_offset)
-        {
-            d -= 2 * x_offset + 1;
-            x_offset += 1;
-        }
-        else if (d < 2 * (radius - y_offset))
-        {
-            d += 2 * y_offset - 1;
-            y_offset -= 1;
-        }
-        else
-        {
-            d += 2 * (y_offset - x_offset - 1);
-            y_offset -= 1;
-            x_offset += 1;
-        }
-    }
-}
-
-void SubPlot::draw_cross(SDL2pp::Renderer& renderer, int x, int y, int length)
-{
-    renderer.DrawLine(x + length / 2, y, x - length / 2, y);
-    renderer.DrawLine(x, y + length / 2, x, y - length / 2);
-}
-
-void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, Renderer& renderer, Texture& into, size_t& lenght_drawn, SDL2pp::Texture& total_segment)
+void SubPlot::draw_line(ScreenPoint const& p1, ScreenPoint const& p2, LineStyle line_style, sf::Color const& color, sf::VertexArray& triangles, double& length_drawn)
 {
     int64_t x1 = p1.x;
     int64_t x2 = p2.x;
     int64_t y1 = p1.y;
     int64_t y2 = p2.y;
-    intersect_rect_and_line(hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height, x1, x2, y1, y2);
-    double const max_w = sqrt((double)m_width * (double)m_width + (double)m_height * (double)m_height);
-    double w_candidate = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2)) + 1;
-    int w;
-    if (w_candidate > max_w)
+    if (!intersect_rect_and_line(hmargin + y_axis_name_size() + m_x_label_margin, top_margin + title_size(), m_width, m_height, x1, x2, y1, y2))
+        return;
+    sf::Vector2f const start(x1, y1);
+    sf::Vector2f const end(x2, y2);
+    double const length = (end - start).length();
+    if (line_style == LineStyle::Solid)
     {
-        w = max_w;
+        add_thick_segment(triangles, start, end, line_thickness, color);
     }
-    else
+    else if (line_style == LineStyle::Dashed)
     {
-        w = static_cast<int>(w_candidate);
+        // Only the first half of each period of 2 * dash_length is drawn, and the phase is kept from one segment to the next
+        sf::Vector2f const direction = (end - start) / static_cast<float>(length);
+        double pos = 0.;
+        while (pos < length)
+        {
+            double const phase = fmod(length_drawn + pos, 2 * dash_length);
+            double const next = min(length, pos + (phase < dash_length ? dash_length - phase : 2 * dash_length - phase));
+            if (phase < dash_length)
+                add_thick_segment(triangles, start + direction * static_cast<float>(pos), start + direction * static_cast<float>(next), line_thickness, color);
+            pos = next;
+        }
     }
-    double angle = atan2(y2 - y1, x2 - x1);
-    int x_offset = static_cast<int>(2. * line_width_unit * sin(angle)); // offset due to rotation
-    int y_offset = static_cast<int>(-2. * line_width_unit * cos(angle));
-    Point dst_point { x1 + x_offset, y1 + y_offset };
-    angle *= 360 / (2 * numbers::pi_v<double>); // to degree
-    int segment_offset = lenght_drawn % (int)ceil(max_w);
-    renderer.Copy(total_segment, Rect { segment_offset, 0, w, 5 * line_width_unit }, dst_point, angle, Point { 0, 0 });
-    lenght_drawn += w - line_width_unit;
+    length_drawn += length;
 }
 
 void SubPlot::add_collection(Collection const& c)
@@ -896,7 +889,7 @@ void SubPlot::add_collection(Collection const& c)
     {
         m_collections.back().color = m_plotter.m_color_generator.get_color();
     }
-    m_plotter.add_info_line(InfoLine { m_collections.back().name, m_collections.back().get_color() });
+    m_plotter.add_info_line(InfoLine { m_collections.back().name, m_collections.back().color });
 }
 
 void SubPlot::add_function(Function const& f)
@@ -906,7 +899,7 @@ void SubPlot::add_function(Function const& f)
     {
         m_functions.back().color = m_plotter.m_color_generator.get_color();
     }
-    m_plotter.add_info_line(InfoLine { m_functions.back().name, m_functions.back().get_color() });
+    m_plotter.add_info_line(InfoLine { m_functions.back().name, m_functions.back().color });
 }
 void SubPlot::set_window(double x, double y, double w, double h)
 {
@@ -922,6 +915,7 @@ void SubPlot::initialize()
 {
     if (!m_window_defined)
         initialize_zoom_and_offset();
+    m_title_height = static_cast<int>(lround(m_plotter.m_big_font->getLineSpacing(m_plotter.big_font_size)));
     m_bottom_margin = m_plotter.text_margin + 2 * m_small_font_advance;
     m_x_label_margin = 0; // This has to have a value before determine_axis() is called, but we don't care exactly what
     determine_axis();     // This is needed because it computes m_x_label_margin
@@ -1057,18 +1051,13 @@ vector<SubPlot::InfoLine> SubPlot::infos() const
     vector<InfoLine> r;
     for (auto const& e : m_collections)
     {
-        r.push_back({ e.name, e.get_color() });
+        r.push_back({ e.name, e.color });
     }
     for (auto const& e : m_functions)
     {
-        r.push_back({ e.name, e.get_color() });
+        r.push_back({ e.name, e.color });
     }
     return r;
-}
-
-void Plotter::update_mouse_position()
-{
-    SDL_GetMouseState(&m_mouse_x, &m_mouse_y);
 }
 
 size_t Plotter::hovered_sub_plot() const

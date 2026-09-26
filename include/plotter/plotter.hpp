@@ -17,20 +17,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 SPDX identifier : GPL-3.0-or-later
 */
 #pragma once
-#include <SDL2/SDL.h>
-#include <SDL2pp/SDL2pp.hh>
 #include <array>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <plotter/firacode.hpp>
 #include <plotter/notosans.hpp>
 #include <string>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
+
+namespace sf
+{
+// Forward declarations for SFML classes
+class Color;
+class Font;
+class RenderTarget;
+class VertexArray;
+}
 
 namespace plotter
 {
@@ -82,7 +87,7 @@ enum class PointType
     Cross,
 };
 
-constexpr Color default_color = Color {};
+constexpr Color default_color = Color { };
 
 enum class LineStyle
 {
@@ -99,7 +104,6 @@ struct Collection
     DisplayLines display_lines;
     PointType point_type;
     LineStyle line_style;
-    SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
     Collection(std::vector<double> const& x, std::vector<double> const& y, std::string const& n, DisplayPoints dp = DisplayPoints::Yes, DisplayLines dl = DisplayLines::No, PointType pt = PointType::Square, LineStyle ls = LineStyle::Solid, Color c = default_color)
         : name(n)
         , color(c)
@@ -135,7 +139,6 @@ struct Function
     std::string name;
     LineStyle line_style { LineStyle::Solid };
     Color color { default_color };
-    SDL2pp::Color get_color() const { return SDL2pp::Color(color.red, color.green, color.blue, 255); }
 };
 enum class ColorPalette : uint8_t
 {
@@ -194,18 +197,6 @@ enum class Orthonormal : bool
     No = false
 };
 
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-constexpr uint32_t R_MASK = 0xff000000;
-constexpr uint32_t G_MASK = 0x00ff0000;
-constexpr uint32_t B_MASK = 0x0000ff00;
-constexpr uint32_t A_MASK = 0x000000ff;
-#else
-constexpr uint32_t R_MASK = 0x000000ff;
-constexpr uint32_t G_MASK = 0x0000ff00;
-constexpr uint32_t B_MASK = 0x00ff0000;
-constexpr uint32_t A_MASK = 0xff000000;
-#endif
-
 class Plotter;
 
 class SubPlot
@@ -254,7 +245,7 @@ private:
     struct InfoLine
     {
         std::string name;
-        SDL_Color color;
+        Color color;
     };
 
     // Methods that get called by Plotter
@@ -267,11 +258,11 @@ private:
     int width() const;
     int height() const;
     std::vector<InfoLine> infos() const;
-    std::unique_ptr<SDL2pp::Texture> internal_plot(SDL2pp::Renderer& renderer);
-    void initialize(); // This has to be called each time before a plot
+    void internal_plot(sf::RenderTarget& target, int x, int y); // (x, y) is the top-left corner of the sub plot in the target
+    void initialize();                                          // This has to be called each time before a plot
 
-    void draw_axis(std::tuple<std::vector<Axis>, std::vector<Axis>> const& axis, SDL2pp::Renderer& renderer);
-    void draw_point(Coordinate c, SDL2pp::Renderer& renderer, PointType point_type); // Absolute coordinates
+    void draw_axis(std::tuple<std::vector<Axis>, std::vector<Axis>> const& axis, sf::RenderTarget& target);
+    void draw_point(Coordinate c, PointType point_type, sf::Color const& color, sf::VertexArray& triangles, sf::VertexArray& lines); // Absolute coordinates
     template<typename T>
     T to_plot_x(double x) const
     {
@@ -286,20 +277,18 @@ private:
     double from_plot_y(int x) const;
     bool x_is_in_plot(int x) const;
     bool y_is_in_plot(int y) const;
-    void draw_vertical_line_number(double nb, int x, SDL2pp::Renderer& renderer);
-    void draw_horizontal_line_number(double nb, int y, SDL2pp::Renderer& renderer);
-    void draw_axis_titles(SDL2pp::Renderer& renderer);
-    void plot_collection(Collection const& c, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
-    void plot_function(Function const& f, SDL2pp::Renderer& renderer, SDL2pp::Texture& into);
+    void draw_vertical_line_number(double nb, int x, sf::RenderTarget& target);
+    void draw_horizontal_line_number(double nb, int y, sf::RenderTarget& target);
+    void draw_axis_titles(sf::RenderTarget& target);
+    void plot_collection(Collection const& c, sf::RenderTarget& target);
+    void plot_function(Function const& f, sf::RenderTarget& target);
     ScreenPoint to_point(Coordinate const& c) const;
-    void draw_line(ScreenPoint const& p1, ScreenPoint const& p2, SDL2pp::Renderer& renderer, SDL2pp::Texture& into, size_t& lenght_drawn, SDL2pp::Texture& total_segment);
+    void draw_line(ScreenPoint const& p1, ScreenPoint const& p2, LineStyle line_style, sf::Color const& color, sf::VertexArray& triangles, double& length_drawn);
     void initialize_zoom_and_offset();
-    void draw_content(SDL2pp::Renderer& renderer);
+    void draw_content(sf::RenderTarget& target, int x, int y);
     std::tuple<std::vector<Axis>, std::vector<Axis>> determine_axis();
     double static compute_grid_step(int min_nb, int max_nb, double range);
     bool static intersect_rect_and_line(int64_t rx, int64_t ry, int64_t rw, int64_t rh, int64_t& x1, int64_t& x2, int64_t& y1, int64_t& y2);
-    void static draw_circle(SDL2pp::Renderer& renderer, int x, int y, int radius);
-    void static draw_cross(SDL2pp::Renderer& renderer, int x, int y, int length);
 
     int title_size() const;
     int x_axis_name_size() const;
@@ -322,7 +311,6 @@ private:
     std::tuple<std::vector<Axis>, std::vector<Axis>> m_axis;
     bool m_dirty_axis;
     Orthonormal m_orthonormal;
-    std::unique_ptr<SDL2pp::Texture> m_texture;
     int m_small_font_advance;
     int m_x_label_margin;
     int m_bottom_margin;
@@ -331,6 +319,8 @@ private:
     static constexpr int top_margin = 20;
     static constexpr int hmargin = 10;
     static constexpr int line_width_unit = 1;
+    static constexpr float line_thickness = 2.f * line_width_unit;
+    static constexpr double dash_length = 15.; // In px
     static constexpr int half_point_size = 4;
     static constexpr double zoom_factor = 1.3;
     static constexpr int plot_min_width = 160;
@@ -350,21 +340,8 @@ class Plotter
 {
 public:
     friend class SubPlot;
-    Plotter(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title, ColorPalette p = ColorPalette::Default)
-        : m_running(false)
-        , m_big_font_ops(SDL2pp::RWops::FromConstMem(notosans_ttf, notosans_ttf_len))
-        , m_small_font_ops(SDL2pp::RWops::FromConstMem(firacode_ttf, firacode_ttf_len))
-        , m_big_font(m_big_font_ops, big_font_size)
-        , m_small_font(m_small_font_ops, small_font_size)
-        , m_subplot_mouse_selected(-1)
-        , m_size_cursor(nullptr)
-        , m_arrow_cursor(nullptr)
-        , m_color_generator(p)
-        , m_small_font_advance(m_small_font.GetGlyphAdvance(' '))
-        , m_stacking_direction(StackingDirection::Horizontal)
-    {
-        construct(title, x_title, y_title);
-    }
+    Plotter(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title, ColorPalette p = ColorPalette::Default);
+    ~Plotter();
     bool plot();
     bool save(std::string const& name);
     void add_collection(Collection const& c, int n = 0);
@@ -396,14 +373,12 @@ private:
         double coordinate;
         bool is_main;
     };
-    void construct(std::string const& title, std::optional<std::string> x_title, std::optional<std::string> y_title);
     bool internal_plot(bool save, std::string const& name);
-    void static center_sprite(SDL2pp::Renderer& renderer, SDL2pp::Texture& texture, int x, int y);
+    void render(sf::RenderTarget& target);
     std::string static to_str(double nb, int digits = nb_digits);
+    int small_font_height() const;
     int info_height() const;
-    void draw_info_box(SDL2pp::Renderer& renderer);
-    void static save_img(SDL2pp::Window const& window, SDL2pp::Renderer& renderer, std::string name);
-    void update_mouse_position();
+    void draw_info_box(sf::RenderTarget& target);
     size_t hovered_sub_plot() const;
     void add_info_line(SubPlot::InfoLine const& i);
     int base_x_of_hovered_subplot() const;
@@ -411,17 +386,11 @@ private:
     int width() const;
     int height() const;
 
-    bool m_running;
-    SDL2pp::SDLTTF m_ttf;
-    SDL2pp::RWops m_big_font_ops;
-    SDL2pp::RWops m_small_font_ops;
-    SDL2pp::Font m_big_font;
-    SDL2pp::Font m_small_font;
+    std::unique_ptr<sf::Font> m_big_font;
+    std::unique_ptr<sf::Font> m_small_font;
     int m_mouse_x;
     int m_mouse_y;
     size_t m_subplot_mouse_selected;
-    SDL_Cursor* m_size_cursor;
-    SDL_Cursor* m_arrow_cursor;
     ColorGenerator m_color_generator;
     int m_small_font_advance;
     std::vector<SubPlot::InfoLine> m_infos;
@@ -435,6 +404,8 @@ private:
     static constexpr int text_margin = 5;
     static constexpr int min_width = 160;
     static constexpr int min_height = 120;
+    static constexpr unsigned int frame_rate = 25;
+    static constexpr unsigned int antialiasing_level = 4;
     static constexpr int out_of_the_screen = -1;
     static constexpr int nb_digits = 5;
     static constexpr int info_box_hmargin = 40;
