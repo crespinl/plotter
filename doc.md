@@ -15,29 +15,30 @@ If you already feel bored, please go to the **Examples** section.
 - `SubPlot::add_collection(Collection collection)` : add `collection` to the subplot.
 - `SubPlot::emplace_collection(args)` : takes the arguments needed to build a `Collection`, and constructs it in place.
 - `SubPlot::add_function(Function function)` : add `function` to the subplot.
-- `SubPlot::emplace_collection(args)` : takes the arguments needed to build a `Function`, and constructs it in place.
-- `SubPlot::set_orthonormal(Orthonormal o)` : Sets wether axis has to be orthonormal or not. (Note : axis are orthogonal anyway ;-) )
-- `SubPlot::set_window(double x, double y, double w, double h, int n = 0)` : this sets the top-left point of the displayed area to (x, y).
+- `SubPlot::emplace_function(args)` : takes the arguments needed to build a `Function`, and constructs it in place.
+- `SubPlot::set_orthonormal(Orthonormal o = Orthonormal::Yes)` : Sets wether axis has to be orthonormal or not. (Note : axis are orthogonal anyway ;-) )
+- `SubPlot::set_window(double x, double y, double w, double h)` : this sets the top-left point of the displayed area to (x, y).
     The subplot will then adapt $x/y$ ratio and zoom to make the displayed area represent exactly the (x, x+w, y, y-h) rectangle. If `SubPlot::set_orthonormal` was called, it is overriden.
 
 
 ## Plotter
 
 - `Plotter::Plotter(args, ColorPalette p)` : constructs the plotter with a first subplot, created with `args`, with color palette `p`.
-- `Plotter::plot()` : displays the current plot.
-- `Plotter::save(string name)` : Saves the current plot to `name` as a png image.
+- `Plotter::plot()` : displays the current plot, until the window is closed. Returns `false` if an error occurred.
+- `Plotter::save(string name)` : Saves the current plot to `name.png`. Returns `false` if an error occurred or if the image could not be written.
+    Note : a display (X11 or Wayland session) is still needed, even if no window is shown.
 - `Plotter::add_collection(Collection collection, int n)` : add `collection` to the n-th subplot.
 - `Plotter::emplace_collection<int n = 0>(args)` : takes the arguments needed to build a `Collection`, and constructs it in place, in the n-th subplot.
 - `Plotter::add_function(Function function, int n)` : add `function` to the n-th subplot.
-- `Plotter::emplace_collection<int n = 0>(args)` : takes the arguments needed to build a `Function`, and constructs it in place, in the n-th subplot.
-- `Plotter::set_window(double x, double y, double w, double h, int n = 0)` : call `Plotter::set_window` on the n-th subplot.
+- `Plotter::emplace_function<int n = 0>(args)` : takes the arguments needed to build a `Function`, and constructs it in place, in the n-th subplot.
+- `Plotter::set_window(double x, double y, double w, double h, int n = 0)` : call `SubPlot::set_window` on the n-th subplot.
 - `Plotter::set_stacking_direction(StackingDirection d)` : sets the stacking direction of subplots to vertical or horizontal.
 - `Plotter::add_sub_plot(args)` : adds a subplot to the plotter, and returns a reference to it. Note : you can discard it, if you prefer to acces the subplot via the plotter itself.
 
 ## Collection
 
 - `Collection::Collection(vector<Coordinate> p, string n, DisplayPoints dp, DisplayLines dl, PointType pt, LineStyle ls, Color c)` : constructs a collection of points of coordinates `p`.
-    Default values are `DisplayPoints::Yes`, `DisplayLines::No`, `PointType::Square`, `LineStype::Solid`, `c = default_color`.
+    Default values are `DisplayPoints::Yes`, `DisplayLines::No`, `PointType::Square`, `LineStyle::Solid`, `c = default_color`.
 - `Collection::Collection(vector<double> x, vector<double> y, string n, DisplayPoints dp, DisplayLines dl, PointType pt, LineStyle ls, Color c)` : same as before, but the coordinates are in `x` for x coordinates and `y` for y coordinates.
 
 
@@ -98,6 +99,7 @@ What would be a documentation without examples ?
 A full and easy one :
 
 ```cpp
+#include <cmath>
 #include <vector>
 #include <plotter/plotter.hpp>
 
@@ -143,8 +145,8 @@ for (size_t i = 0; i < n; i++)
     coordinates3.emplace_back(i, 10 * cos(i));
 }
 plotter.add_collection({ coordinates1, "First sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Square, LineStyle::Solid, default_color }, 1); // Specify the subplot as a function parameter
-plotter.emplace_collection<2>(coordinates2_x, coordinates2_y, "Second sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Circle); // Or as a template argument
-plotter.emplace_collection<2>(coordinates3, "Third sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Cross);
+plotter.emplace_collection<1>(coordinates2_x, coordinates2_y, "Second sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Circle); // Or as a template argument
+plotter.emplace_collection<1>(coordinates3, "Third sequence of points", DisplayPoints::Yes, DisplayLines::No, PointType::Cross);
 plotter.plot();
 plotter.set_stacking_direction(StackingDirection::Vertical); // Changes the stacking direction after display, but before saving.
 plotter.save("test"); // Saves as test.png
